@@ -60,6 +60,7 @@ private:
   void number();
   void unary();
   void binary();
+  void literal();
   void grouping();
 
   void advance();
@@ -81,28 +82,28 @@ private:
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_SEMICOLON
     { NULL,     &Compiler::binary,  PREC_FACTOR },                // TOKEN_SLASH
     { NULL,     &Compiler::binary,  PREC_FACTOR },                // TOKEN_STAR
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_BANG
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_BANG_EQUAL
+    { &Compiler::unary,     NULL,    PREC_NONE },                             // TOKEN_BANG
+    { NULL,     &Compiler::binary,    PREC_EQUALITY},                             // TOKEN_BANG_EQUAL
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_EQUAL
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_EQUAL_EQUAL
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_GREATER
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_GREATER_EQUAL
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_LESS
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_LESS_EQUAL
+    { NULL,     &Compiler::binary,    PREC_EQUALITY },                             // TOKEN_EQUAL_EQUAL
+    { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_GREATER
+    { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_GREATER_EQUAL
+    { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_LESS
+    { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_LESS_EQUAL
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_IDENTIFIER
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_STRING
     { &Compiler::number,   NULL,    PREC_NONE },                  // TOKEN_NUMBER
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_AND
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_ELSE
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_FALSE
+    { &Compiler::literal,     NULL,    PREC_NONE },                             // TOKEN_FALSE
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_FOR
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_FUN
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_IF
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_NIL
+    { &Compiler::literal,     NULL,    PREC_NONE },                             // TOKEN_NIL
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_OR
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_PRINT
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_RETURN
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_TRUE
+    { &Compiler::literal,     NULL,    PREC_NONE },                             // TOKEN_TRUE
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_VAR
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_WHILE
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_ERROR

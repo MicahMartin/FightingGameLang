@@ -26,6 +26,8 @@ public:
 private:
   ExecutionCode run();
   void runtimeError(const char* format, ...);
+  bool isFalsey(Value value);
+  bool valuesEqual(Value valueA, Value valueB);
   Script* scriptPointer;
   uint8_t* instructionPointer;
   Compiler compiler;

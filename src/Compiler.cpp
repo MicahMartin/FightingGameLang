@@ -82,6 +82,7 @@ void Compiler::unary() {
 
   // Emit the operator instruction.
   switch (operatorType) {
+    case TOKEN_BANG: emitByte(OP_NOT); break;
     case TOKEN_MINUS: emitByte(OP_NEGATE); break;
     default:
       return; // Unreachable.
@@ -98,10 +99,26 @@ void Compiler::binary() {
 
   // Emit the operator instruction.
   switch (operatorType) {
+    case TOKEN_BANG_EQUAL:    emitBytes(OP_EQUAL, OP_NOT); break;
+    case TOKEN_EQUAL_EQUAL:   emitByte(OP_EQUAL); break;
+    case TOKEN_GREATER:       emitByte(OP_GREATER); break;
+    case TOKEN_GREATER_EQUAL: emitBytes(OP_LESS, OP_NOT); break;
+    case TOKEN_LESS:          emitByte(OP_LESS); break;
+    case TOKEN_LESS_EQUAL:    emitBytes(OP_GREATER, OP_NOT); break;
     case TOKEN_PLUS:          emitByte(OP_ADD); break;
     case TOKEN_MINUS:         emitByte(OP_SUBTRACT); break;
     case TOKEN_STAR:          emitByte(OP_MULTIPLY); break;
     case TOKEN_SLASH:         emitByte(OP_DIVIDE); break;
+    default:
+      return; // Unreachable.
+  }
+}
+
+void Compiler::literal() {
+  switch (parser.previous.type) {
+    case TOKEN_FALSE: emitByte(OP_FALSE); break;
+    case TOKEN_NIL: emitByte(OP_NIL); break;
+    case TOKEN_TRUE: emitByte(OP_TRUE); break;
     default:
       return; // Unreachable.
   }

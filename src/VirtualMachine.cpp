@@ -44,6 +44,20 @@ void VirtualMachine::runtimeError(const char* format, ...) {
   stack.reset();
 }
 
+inline bool VirtualMachine::isFalsey(Value value) {
+  return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
+  if (valueA.type != valueB.type) return false;
+
+  switch (valueA.type) {
+    case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
+    case VAL_NIL:    return true;
+    case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
+  }
+}
+
 inline ExecutionCode VirtualMachine::run(){
   // lets go fast bb
   #define READ_BYTE() (*instructionPointer++)
@@ -79,10 +93,24 @@ inline ExecutionCode VirtualMachine::run(){
         stack.push(symbol);
         break;
       }
+      case OP_NIL: stack.push(NIL_VAL); break;
+      case OP_TRUE: stack.push(BOOL_VAL(true)); break;
+      case OP_FALSE: stack.push(BOOL_VAL(false)); break;
+      case OP_EQUAL: {
+        Value b = stack.pop();
+        Value a = stack.pop();
+        stack.push(BOOL_VAL(valuesEqual(a, b)));
+        break;
+      }
+      case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
+      case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
       case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
       case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
       case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
       case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
+      case OP_NOT:
+        stack.push(BOOL_VAL(isFalsey(stack.pop())));
+        break;
       case OP_NEGATE: {
         if (!IS_NUMBER(stack.peek(0))) {
           runtimeError("Operand must be a number.");
