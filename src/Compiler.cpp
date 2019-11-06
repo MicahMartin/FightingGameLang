@@ -36,6 +36,12 @@ Script* Compiler::currentScript(){
   return scriptPointer;
 }
 
+void Compiler::printStatement(){
+  expression();
+  consume(TOKEN_SEMICOLON, "expected ; after value");
+  emitByte(OP_PRINT);
+}
+
 void Compiler::parsePrecedence(Precedence precedence){
   advance();
   ParseFn prefixRule = getRule(parser.previous.type)->prefix;
@@ -136,6 +142,17 @@ void Compiler::grouping() {
   consume(TOKEN_RIGHT_PAREN, "you're missing a ')' after the expression dingus");
 }
 
+
+bool Compiler::check(TokenType expected) {
+  return parser.current.type == expected;
+}
+
+bool Compiler::match(TokenType expected) {
+  if(!check(expected)) return false;
+  advance();
+  return true;
+}
+
 void Compiler::advance() {
   parser.previous = parser.current;
 
@@ -150,6 +167,17 @@ void Compiler::advance() {
 void Compiler::expression() {
   parsePrecedence(PREC_ASSIGNMENT);
 }
+
+void Compiler::statement() {
+  if(match(TOKEN_PRINT)){
+    printStatement();
+  }
+}
+
+void Compiler::declaration() {
+  statement();
+}
+
 
 void Compiler::consume(TokenType type, const char* syntaxErrorMessage){
   if (parser.current.type == type) {
@@ -168,8 +196,9 @@ bool Compiler::compile(const char *source, Script* script){
   parser.panicMode = false;
 
   advance();
-  expression();
-  consume(TOKEN_EOF, "uhh, your expression never ended");
+  while (!match(TOKEN_EOF)) {
+    declaration();
+  }
   emitByte(OP_RETURN);
   if (!parser.hadError) {
     script->disassembleScript("mainScript");

@@ -152,6 +152,11 @@ inline ExecutionCode VirtualMachine::run(){
         stack.push(NUMBER_VAL(-AS_NUMBER(stack.pop())));
         break;
       }
+      case OP_PRINT: {
+        ValueFn::printValue(stack.pop());
+        printf("\n");
+        break;
+      }
       case OP_RETURN: {
         return EC_OK;
       }

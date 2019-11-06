@@ -56,6 +56,7 @@ private:
   std::forward_list<Obj*>* recordListPointer;
   std::unordered_map<sObjString*, Value>* stringTablePointer;
 
+  void printStatement();
   void parsePrecedence(Precedence precedence);
   ParseRule* getRule(TokenType type);
 
@@ -70,8 +71,13 @@ private:
   void literal();
   void grouping();
 
+  bool match(TokenType expected);
+  bool check(TokenType expected);
+
   void advance();
   void expression();
+  void statement();
+  void declaration();
   void consume(TokenType, const char* syntaxErrorMessage);
 
   void error(const char* message);
