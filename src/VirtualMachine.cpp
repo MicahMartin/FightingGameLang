@@ -1,4 +1,5 @@
 #include "VirtualMachine.h"
+#include "Object.h"
 
 
 VirtualMachine::VirtualMachine(){}
@@ -48,6 +49,20 @@ inline bool VirtualMachine::isFalsey(Value value) {
   return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
 }
 
+void VirtualMachine::concatenate() {
+  ObjString* b = AS_STRING(stack.pop());
+  ObjString* a = AS_STRING(stack.pop());
+
+  int length = a->length + b->length;
+  char* chars = ALLOCATE(char, length + 1);
+  memcpy(chars, a->chars, a->length);
+  memcpy(chars + a->length, b->chars, b->length);
+  chars[length] = '\0';
+
+  ObjString* result = Object::takeString(chars, length);
+  stack.push(OBJ_VAL(result));
+}
+
 inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
   if (valueA.type != valueB.type) return false;
 
@@ -55,6 +70,11 @@ inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
     case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
     case VAL_NIL:    return true;
     case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
+    case VAL_OBJ: {
+      ObjString* aString = AS_STRING(valueA);
+      ObjString* bString = AS_STRING(valueB);
+      return aString->length == bString->length && memcmp(aString->chars, bString->chars, aString->length) == 0;
+    }
   }
 }
 
@@ -104,7 +124,19 @@ inline ExecutionCode VirtualMachine::run(){
       }
       case OP_GREATER:  BINARY_OP(BOOL_VAL, >); break;
       case OP_LESS:     BINARY_OP(BOOL_VAL, <); break;
-      case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
+      case OP_ADD: {
+        if (IS_STRING(stack.peek(0)) && IS_STRING(stack.peek(1))) {
+          concatenate();
+        } else if (IS_NUMBER(stack.peek(0)) && IS_NUMBER(stack.peek(1))) {
+          long b = AS_NUMBER(stack.pop());
+          long a = AS_NUMBER(stack.pop());
+          stack.push(NUMBER_VAL(a + b));
+        } else {
+          runtimeError("Operands must be two numbers or two strings.");
+          return EC_RUNTIME_ERROR;
+        }
+        break;
+      }
       case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
       case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
       case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;

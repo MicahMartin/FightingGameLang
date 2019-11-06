@@ -4,6 +4,7 @@
 #include "Common.h"
 #include "Scanner.h"
 #include "Script.h"
+#include <forward_list>
 
 typedef struct {
   Token current;
@@ -49,6 +50,8 @@ private:
   Scanner scanner;
   Parser parser;
   Script* scriptPointer;
+  //TODO: Free these objects
+  std::forward_list<Obj*> noMemoryLeaks;
 
   void parsePrecedence(Precedence precedence);
   ParseRule* getRule(TokenType type);
@@ -58,6 +61,7 @@ private:
   void emitConstant(Value value);
 
   void number();
+  void string();
   void unary();
   void binary();
   void literal();
@@ -91,7 +95,7 @@ private:
     { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_LESS
     { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_LESS_EQUAL
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_IDENTIFIER
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_STRING
+    { &Compiler::string,     NULL,    PREC_NONE },                             // TOKEN_STRING
     { &Compiler::number,   NULL,    PREC_NONE },                  // TOKEN_NUMBER
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_AND
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_ELSE

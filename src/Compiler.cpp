@@ -1,4 +1,5 @@
 #include "Compiler.h"
+#include "Object.h"
 
 
 Compiler::Compiler(){}
@@ -71,6 +72,10 @@ void Compiler::emitConstant(Value value) {
 void Compiler::number() {
   long value = strtol(parser.previous.start, NULL, 10);
   emitConstant(NUMBER_VAL(value));
+}
+
+void Compiler::string() {
+  emitConstant(OBJ_VAL(Object::copyString(parser.previous.start + 1, parser.previous.length - 2, noMemoryLeaks)));
 }
 
 
