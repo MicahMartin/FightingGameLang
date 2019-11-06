@@ -22,7 +22,7 @@ void Object::printObject(Value value) {
   }
 }
 
-static Obj* allocateObject(size_t size, ObjType type, std::forward_list<Obj*>* objLinkedList) {
+static Obj* allocateObject(size_t size, ObjType type, Object::objList* objLinkedList) {
   printf("do I die during real allocation?\n");
   Obj* object = (Obj*)Object::reallocate(NULL, 0, size);
   object->type = type;
@@ -30,25 +30,34 @@ static Obj* allocateObject(size_t size, ObjType type, std::forward_list<Obj*>* o
   return object;
 }
 
-static ObjString* allocateString(char* chars, int length, std::forward_list<Obj*>* objLinkedList) {
+static inline uint32_t hashString(const char* chars, int length){
+  uint32_t hash = std::hash<std::string>()(std::string(chars, length));
+  printf("the hash for the string: %d\n", hash);
+  return hash;
+}
+
+static ObjString* allocateString(char* chars, int length, uint32_t hash, Object::objList* objLinkedList, Object::stringList* stringList) {
   printf("do I die during allocation?\n");
   ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING, objLinkedList);
   string->length = length;
   string->chars = chars;
+  string->hash = hash;
 
   return string;
 }
 
-ObjString* Object::takeString(char* chars, int length, std::forward_list<Obj*>* objLinkedList) {
+ObjString* Object::takeString(char* chars, int length, Object::objList* objLinkedList, Object::stringList* stringList) {
   printf("do I die in takeString?\n");
-  return allocateString(chars, length, objLinkedList);
+  uint32_t hash = hashString(chars, length);
+  return allocateString(chars, length, hash, objLinkedList, stringList);
 }
 
-ObjString* Object::copyString(const char* chars, int length, std::forward_list<Obj*>* objLinkedList) {
+ObjString* Object::copyString(const char* chars, int length, Object::objList* objLinkedList, Object::stringList* stringList) {
   printf("do I die in copyString?\n");
+  uint32_t hash = hashString(chars, length);
   char* heapChars = ALLOCATE(char, length + 1);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';
 
-  return allocateString(heapChars, length, objLinkedList);
+  return allocateString(heapChars, length, hash, objLinkedList, stringList);
 }

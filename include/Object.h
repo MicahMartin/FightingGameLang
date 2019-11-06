@@ -4,6 +4,9 @@
 #include "Common.h"
 #include "Value.h"
 #include <forward_list>
+#include <functional>
+#include <unordered_map>
+#include <string>
 
 #define OBJ_TYPE(value)         (AS_OBJ(value)->type)
 #define IS_STRING(value)        Object::isObjType(value, OBJ_STRING)
@@ -26,14 +29,30 @@ struct sObjString {
   int length;
   char* chars;
   uint32_t hash;
+  bool operator==(const sObjString& other) const {
+    printf("helllooo?\n");
+    return other.length == length && memcmp(other.chars, chars, other.length) == 0;
+  }
 };
+
+namespace std {
+  template <> struct hash<sObjString> {
+    size_t operator()(const sObjString& key) const {
+      printf("hash of the string: %ld\n", hash<string>()(string(key.chars)));
+      return hash<string>()(string(key.chars, key.length));
+    }
+  };
+}
 
 namespace  Object {
   void* reallocate(void* previous, size_t oldSize, size_t newSize);
   void printObject(Value value);
 
-  ObjString* takeString(char* chars, int length, std::forward_list<Obj*>* objLinkedList);
-  ObjString* copyString(const char* chars, int length, std::forward_list<Obj*>* objLinkedList);
+  typedef std::forward_list<Obj*> objList;
+  typedef std::unordered_map<sObjString*, Value> stringList;
+
+  ObjString* takeString(char* chars, int length, objList* objLinkedList, stringList* stringHashTable);
+  ObjString* copyString(const char* chars, int length, objList* objLinkedList, stringList* stringHashTable);
 
   static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;

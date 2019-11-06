@@ -75,7 +75,9 @@ void Compiler::number() {
 }
 
 void Compiler::string() {
-  emitConstant(OBJ_VAL(Object::copyString(parser.previous.start + 1, parser.previous.length - 2, recordListPointer)));
+  printf("stringTableSize before: %ld\n", stringTablePointer->size());
+  emitConstant(OBJ_VAL(Object::copyString(parser.previous.start+1, parser.previous.length-2, recordListPointer, stringTablePointer)));
+  printf("stringTableSize after: %ld\n", stringTablePointer->size());
 }
 
 
@@ -186,4 +188,8 @@ void Compiler::emitBytes(uint8_t firstByte, uint8_t secondByte) {
 
 void Compiler::setRecordListPointer(std::forward_list<Obj*>* pointer){
   recordListPointer = pointer;
+}
+
+void Compiler::setStringTablePointer(std::unordered_map<sObjString*, Value>* pointer){
+  stringTablePointer = pointer;
 }

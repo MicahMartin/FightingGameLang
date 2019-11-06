@@ -5,6 +5,7 @@
 #include "Script.h"
 #include "Stack.h"
 #include "Compiler.h"
+#include <unordered_map>
 
 typedef enum {
   EC_OK,
@@ -37,6 +38,7 @@ private:
   Stack stack;
   //TODO: Free these objects
   std::forward_list<Obj*> noMemoryLeaks;
+  std::unordered_map<ObjString*, Value> stringTable;
 };
 
 #endif

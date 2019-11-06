@@ -59,7 +59,7 @@ void VirtualMachine::concatenate() {
   memcpy(chars + a->length, b->chars, b->length);
   chars[length] = '\0';
 
-  ObjString* result = Object::takeString(chars, length, &noMemoryLeaks);
+  ObjString* result = Object::takeString(chars, length, &noMemoryLeaks, &stringTable);
   stack.push(OBJ_VAL(result));
 }
 
@@ -164,8 +164,10 @@ inline ExecutionCode VirtualMachine::run(){
 }
 
 ExecutionCode VirtualMachine::execute(const char* source){
+  // TODO: Script array, one script for each character state, one big script for input
   Script script;
   compiler.setRecordListPointer(&noMemoryLeaks);
+  compiler.setStringTablePointer(&stringTable);
 
   if (!compiler.compile(source, &script)) {
     return EC_COMPILE_ERROR;
