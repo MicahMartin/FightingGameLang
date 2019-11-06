@@ -1,12 +1,17 @@
 #include "Common.h"
 #include "Script.h"
+#include "VirtualMachine.h"
 
 int main(int argc, char* args[]){
-  Script mainScript;
+  VirtualMachine vm;
+  vm.debugMode = true;
 
-  uint8_t symbolIndex = mainScript.writeSymbol(100);
-  mainScript.writeByte(OP_CONSTANT, 1);
-  mainScript.writeByte(symbolIndex, 1);
-  mainScript.writeByte(OP_RETURN, 1);
-  mainScript.disassembleScript("mainScript");
+  if (argc == 1) {
+    vm.repl();
+  } else if (argc == 2) {
+    vm.runFile(args[1]);
+  } else {
+    fprintf(stderr, "Usage: virtual_machine [path]\n");
+    exit(64);
+  }
 }
