@@ -59,7 +59,7 @@ void VirtualMachine::concatenate() {
   memcpy(chars + a->length, b->chars, b->length);
   chars[length] = '\0';
 
-  ObjString* result = Object::takeString(chars, length);
+  ObjString* result = Object::takeString(chars, length, &noMemoryLeaks);
   stack.push(OBJ_VAL(result));
 }
 
@@ -165,6 +165,7 @@ inline ExecutionCode VirtualMachine::run(){
 
 ExecutionCode VirtualMachine::execute(const char* source){
   Script script;
+  compiler.setRecordListPointer(&noMemoryLeaks);
 
   if (!compiler.compile(source, &script)) {
     return EC_COMPILE_ERROR;
@@ -173,7 +174,7 @@ ExecutionCode VirtualMachine::execute(const char* source){
   instructionPointer = scriptPointer->scriptStart();
 
   ExecutionCode result = run();
-
+  // TODO: account for constant table / string table
   return EC_OK;
 };
 

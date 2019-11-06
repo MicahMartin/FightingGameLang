@@ -44,14 +44,14 @@ public:
   bool compile(const char* source, Script* script);
   void emitByte(uint8_t byte);
   void emitBytes(uint8_t firstByte, uint8_t secondByte);
+  void setRecordListPointer(std::forward_list<Obj*>* recordListPointer);
   Script* currentScript();
 
 private:
   Scanner scanner;
   Parser parser;
   Script* scriptPointer;
-  //TODO: Free these objects
-  std::forward_list<Obj*> noMemoryLeaks;
+  std::forward_list<Obj*>* recordListPointer;
 
   void parsePrecedence(Precedence precedence);
   ParseRule* getRule(TokenType type);

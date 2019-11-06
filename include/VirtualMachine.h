@@ -35,6 +35,8 @@ private:
   uint8_t* instructionPointer;
   Compiler compiler;
   Stack stack;
+  //TODO: Free these objects
+  std::forward_list<Obj*> noMemoryLeaks;
 };
 
 #endif

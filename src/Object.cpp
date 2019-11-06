@@ -22,14 +22,16 @@ void Object::printObject(Value value) {
   }
 }
 
-static Obj* allocateObject(size_t size, ObjType type, std::forward_list<Obj*> objLinkedList) {
+static Obj* allocateObject(size_t size, ObjType type, std::forward_list<Obj*>* objLinkedList) {
+  printf("do I die during real allocation?\n");
   Obj* object = (Obj*)Object::reallocate(NULL, 0, size);
   object->type = type;
-  objLinkedList.push_front(object);
+  objLinkedList->push_front(object);
   return object;
 }
 
-static ObjString* allocateString(char* chars, int length, std::forward_list<Obj*> objLinkedList) {
+static ObjString* allocateString(char* chars, int length, std::forward_list<Obj*>* objLinkedList) {
+  printf("do I die during allocation?\n");
   ObjString* string = ALLOCATE_OBJ(ObjString, OBJ_STRING, objLinkedList);
   string->length = length;
   string->chars = chars;
@@ -37,11 +39,13 @@ static ObjString* allocateString(char* chars, int length, std::forward_list<Obj*
   return string;
 }
 
-ObjString* Object::takeString(char* chars, int length, std::forward_list<Obj*> objLinkedList) {
+ObjString* Object::takeString(char* chars, int length, std::forward_list<Obj*>* objLinkedList) {
+  printf("do I die in takeString?\n");
   return allocateString(chars, length, objLinkedList);
 }
 
-ObjString* Object::copyString(const char* chars, int length, std::forward_list<Obj*> objLinkedList) {
+ObjString* Object::copyString(const char* chars, int length, std::forward_list<Obj*>* objLinkedList) {
+  printf("do I die in copyString?\n");
   char* heapChars = ALLOCATE(char, length + 1);
   memcpy(heapChars, chars, length);
   heapChars[length] = '\0';

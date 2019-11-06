@@ -25,14 +25,15 @@ struct sObjString {
   Obj obj;
   int length;
   char* chars;
+  uint32_t hash;
 };
 
 namespace  Object {
   void* reallocate(void* previous, size_t oldSize, size_t newSize);
   void printObject(Value value);
 
-  ObjString* takeString(char* chars, int length, std::forward_list<Obj*> objLinkedList);
-  ObjString* copyString(const char* chars, int length, std::forward_list<Obj*> objLinkedList);
+  ObjString* takeString(char* chars, int length, std::forward_list<Obj*>* objLinkedList);
+  ObjString* copyString(const char* chars, int length, std::forward_list<Obj*>* objLinkedList);
 
   static inline bool isObjType(Value value, ObjType type) {
     return IS_OBJ(value) && AS_OBJ(value)->type == type;
