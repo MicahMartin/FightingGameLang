@@ -25,6 +25,7 @@ public:
   bool debugMode;
 private:
   ExecutionCode run();
+  void runtimeError(const char* format, ...);
   Script* scriptPointer;
   uint8_t* instructionPointer;
   Compiler compiler;

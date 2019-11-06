@@ -30,16 +30,34 @@ void VirtualMachine::runFile(const char *path){
   delete source;
 }
 
+void VirtualMachine::runtimeError(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
+
+  size_t instruction = instructionPointer - scriptPointer->scriptStart();
+  int line = scriptPointer->lines[instruction];
+  fprintf(stderr, "[line %d] in script\n", line);
+
+  stack.reset();
+}
+
 inline ExecutionCode VirtualMachine::run(){
   // lets go fast bb
   #define READ_BYTE() (*instructionPointer++)
   #define READ_SYMBOL() (scriptPointer->symbols[READ_BYTE()])
-  #define BINARY_OP(op) \
+  #define BINARY_OP(valueType, op) \
     do { \
-      long b = stack.pop(); \
-      long a = stack.pop(); \
+      if (!IS_NUMBER(stack.peek(0)) || !IS_NUMBER(stack.peek(1))) { \
+        runtimeError("Gotta use numbers for binary operands my G, strings coming soon"); \
+        return EC_RUNTIME_ERROR; \
+      } \
+      long b = AS_NUMBER(stack.pop()); \
+      long a = AS_NUMBER(stack.pop()); \
       printf("doing %ld op %ld\n", a, b); \
-      stack.push(a op b); \
+      stack.push(valueType(a op b)); \
     } while (false)
 
   for (;;) {
@@ -61,17 +79,20 @@ inline ExecutionCode VirtualMachine::run(){
         stack.push(symbol);
         break;
       }
-      case OP_ADD:      BINARY_OP(+); break;
-      case OP_SUBTRACT: BINARY_OP(-); break;
-      case OP_MULTIPLY: BINARY_OP(*); break;
-      case OP_DIVIDE:   BINARY_OP(/); break;
+      case OP_ADD:      BINARY_OP(NUMBER_VAL, +); break;
+      case OP_SUBTRACT: BINARY_OP(NUMBER_VAL, -); break;
+      case OP_MULTIPLY: BINARY_OP(NUMBER_VAL, *); break;
+      case OP_DIVIDE:   BINARY_OP(NUMBER_VAL, /); break;
       case OP_NEGATE: {
-        Value symbol = READ_SYMBOL();
-        stack.push(-stack.pop());
+        if (!IS_NUMBER(stack.peek(0))) {
+          runtimeError("Operand must be a number.");
+          return EC_RUNTIME_ERROR;
+        }
+
+        stack.push(NUMBER_VAL(-AS_NUMBER(stack.pop())));
         break;
       }
       case OP_RETURN: {
-        printf("returned! %ld\n", *(stack.stackTop-1));
         return EC_OK;
       }
     }

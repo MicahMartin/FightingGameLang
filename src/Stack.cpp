@@ -6,6 +6,10 @@ Stack::Stack(){
 
 Stack::~Stack(){}
 
+void Stack::reset(){
+  stackTop = stack;
+}
+
 void Stack::push(Value value){
   *stackTop = value;
   stackTop++;
@@ -14,4 +18,8 @@ void Stack::push(Value value){
 Value Stack::pop(){
   stackTop--;
   return *stackTop;
+}
+
+Value Stack::peek(int distance){
+  return stackTop[-1 - distance];
 }

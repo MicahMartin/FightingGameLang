@@ -33,9 +33,9 @@ public:
   void disassembleScript(const char* name);
 
   std::vector<Value> symbols;
+  std::vector<int> lines;
 private:
   std::vector<uint8_t> code;
-  std::vector<int> lines;
 };
 
 #endif /*  */

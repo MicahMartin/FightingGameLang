@@ -69,8 +69,8 @@ void Compiler::emitConstant(Value value) {
 }
 
 void Compiler::number() {
-  Value value = strtol(parser.previous.start, NULL, 10);
-  emitConstant(value);                               
+  long value = strtol(parser.previous.start, NULL, 10);
+  emitConstant(NUMBER_VAL(value));
 }
 
 
