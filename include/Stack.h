@@ -12,6 +12,8 @@ public:
   void push(Value value);
   Value pop();
   Value peek(int distance);
+  Value at(int index);
+  void set(Value val, int index);
 
   Value stack[256];
   Value* stackTop;

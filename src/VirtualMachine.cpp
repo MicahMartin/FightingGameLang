@@ -53,7 +53,6 @@ void VirtualMachine::concatenate() {
   std::string* a = AS_STRING(stack.pop());
   // TODO: intern for garbage collection
   std::string* newString = new std::string(*a + *b);
-  printf("the newString %s\n", newString->c_str());
   stack.push(STRING_VAL(newString));
 }
 
@@ -69,14 +68,20 @@ inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
 }
 
 inline ExecutionCode VirtualMachine::run(){
+  const char* unreachable = R""""(If you're seeing this, the code is in what I thought was an unreachable state. 
+  I could give you advice for what to do. But honestly, why should you trust me? I clearly screwed this up. 
+  I'm writing a message that should never appear, yet I know it will probably appear someday.
+  On a deep level, I know I'm not up to this task. I'm so sorry.)"""";
   // lets go fast bb
   #define READ_BYTE() (*instructionPointer++)
   #define READ_SYMBOL() (scriptPointer->symbols[READ_BYTE()])
+  #define READ_SHORT() \
+    (instructionPointer += 2, (uint16_t)((instructionPointer[-2] << 8) | instructionPointer[-1]))
   #define READ_STRING() AS_STRING(READ_SYMBOL())
   #define BINARY_OP(valueType, op) \
     do { \
       if (!IS_NUMBER(stack.peek(0)) || !IS_NUMBER(stack.peek(1))) { \
-        runtimeError("how did you get here??"); \
+        runtimeError(unreachable); \
         return EC_RUNTIME_ERROR; \
       } \
       long b = AS_NUMBER(stack.pop()); \
@@ -108,9 +113,19 @@ inline ExecutionCode VirtualMachine::run(){
       case OP_TRUE: stack.push(BOOL_VAL(true)); break;
       case OP_FALSE: stack.push(BOOL_VAL(false)); break;
       case OP_POP: stack.pop(); break;
+      case OP_GET_LOCAL: {
+        uint8_t slot = READ_BYTE();
+        Value val = stack.at(slot);
+        stack.push(val);
+        break;
+      }
+       case OP_SET_LOCAL: {
+        uint8_t slot = READ_BYTE();
+        stack.set(stack.peek(0), slot);
+        break;
+      }
       case OP_GET_GLOBAL: {
         std::string* name = READ_STRING();
-        printf("looking for variable %s\n", name->c_str());
 //        for (auto i : scriptPointer->globals) {
 //          printf("wtf %s\n", AS_STRING(i.second)->chars);
 //        }
@@ -127,6 +142,17 @@ inline ExecutionCode VirtualMachine::run(){
         // printf("defining global %s:%s\n", name->chars, AS_STRING(stack.peek(0))->chars);
         scriptPointer->globals.insert(std::make_pair(*name, stack.peek(0)));
         stack.pop();
+        break;                               
+      }                                      
+      case OP_SET_GLOBAL: {               
+        std::string* name = READ_STRING();
+        // printf("defining global %s:%s\n", name->chars, AS_STRING(stack.peek(0))->chars);
+        auto globalVal = scriptPointer->globals.find(*name);
+        if (globalVal == scriptPointer->globals.end()) {
+          runtimeError("Undefined variable '%s'.", name->c_str());
+          return EC_RUNTIME_ERROR;
+        }
+        scriptPointer->globals[*name] = stack.peek(0);
         break;                               
       }                                      
       case OP_EQUAL: {
@@ -170,6 +196,11 @@ inline ExecutionCode VirtualMachine::run(){
         printf("\n");
         break;
       }
+      case OP_JUMP_IF_FALSE: {
+        uint16_t offset = READ_SHORT();
+        if (isFalsey(stack.peek(0))) instructionPointer  += offset;
+        break;
+      }
       case OP_RETURN: {
         return EC_OK;
       }
@@ -179,6 +210,7 @@ inline ExecutionCode VirtualMachine::run(){
   #undef READ_BYTE
   #undef READ_STRING
   #undef READ_SYMBOL
+  #undef READ_SHORT
   #undef BINARY_OP
 }
 
@@ -193,6 +225,10 @@ ExecutionCode VirtualMachine::execute(const char* source){
   instructionPointer = scriptPointer->scriptStart();
 
   ExecutionCode result = run();
+  printf("ran good once\n");
+  instructionPointer = scriptPointer->scriptStart();
+  ExecutionCode result2 = run();
+  printf("ran good twice?\n");
   // TODO: account for constant table / string table
   return EC_OK;
 };

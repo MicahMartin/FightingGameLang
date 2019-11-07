@@ -22,6 +22,11 @@ uint8_t* Script::scriptStart(){
 }
 /************************************** debugging *************************************/
 // TODO - template based debuggre
+int Script::byteInstruction(const char* name, int offset) {
+  uint8_t slot = code[offset + 1];
+  printf("%-16s %4d\n", name, slot);
+  return offset + 2;
+}
 int Script::symbolInstruction(const char* name, int offset) {
   // get operand (symbol index)
   uint8_t symbolIndex = code[++offset];
@@ -63,8 +68,14 @@ int Script::disassembleInstruction(int offset){
       return simpleInstruction("OP_POP", offset);
     case OP_DEFINE_GLOBAL:
       return symbolInstruction("OP_DEFINE_GLOBAL", offset);
+    case OP_GET_LOCAL:
+      return byteInstruction("OP_GET_LOCAL", offset);
+    case OP_SET_LOCAL:
+      return byteInstruction("OP_SET_LOCAL", offset);
     case OP_GET_GLOBAL:
       return symbolInstruction("OP_GET_GLOBAL", offset);
+    case OP_SET_GLOBAL:
+      return symbolInstruction("OP_SET_GLOBAL", offset);
     case OP_EQUAL:
       return simpleInstruction("OP_EQUAL", offset);
     case OP_GREATER:

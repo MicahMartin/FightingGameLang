@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include "Common.h"
 #include "Value.h"
+#include "Scanner.h"
 
 typedef enum {
   OP_CONSTANT,
@@ -12,7 +13,10 @@ typedef enum {
   OP_TRUE,
   OP_FALSE,
   OP_POP,
+  OP_GET_LOCAL,
+  OP_SET_LOCAL,
   OP_DEFINE_GLOBAL,
+  OP_SET_GLOBAL,
   OP_GET_GLOBAL,
   OP_EQUAL,
   OP_GREATER,
@@ -24,8 +28,14 @@ typedef enum {
   OP_NOT,
   OP_NEGATE,
   OP_PRINT,
+  OP_JUMP_IF_FALSE,
   OP_RETURN
 } OpCode;
+
+typedef struct {
+  Token name;
+  int depth;
+} Local;
 
 class Script {
 public:
@@ -39,6 +49,7 @@ public:
   uint8_t* scriptStart();
   // debugging
   // TODO: abstract to template based debugger
+  int byteInstruction(const char* name, int offset);
   int symbolInstruction(const char* name, int offset);
   int simpleInstruction(const char* name, int offset);
   int disassembleInstruction(int offset);
@@ -46,10 +57,14 @@ public:
 
   std::vector<Value> symbols;
   std::unordered_map<std::string, Value> globals;
-  std::vector<Value> locals;
   std::vector<int> lines;
-private:
+
+  // TODO: Stop being lazy and make accessor funcs
   std::vector<uint8_t> code;
+  Local locals[256];
+  int localCount = 0;
+  int scopeDepth = 0;
+private:
 };
 
 #endif /*  */

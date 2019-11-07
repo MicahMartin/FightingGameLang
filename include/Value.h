@@ -4,8 +4,6 @@
 #include "Common.h"
 #include <string>
 
-// Object.h forward decl
-
 typedef enum {
   VAL_BOOL,
   VAL_NIL,
@@ -21,6 +19,8 @@ typedef struct {
     std::string* string;
   } as;
 } Value;
+
+//TODO: Learn templates :(
 
 #define IS_BOOL(value)    ((value).type == VAL_BOOL)
 #define IS_NIL(value)     ((value).type == VAL_NIL)

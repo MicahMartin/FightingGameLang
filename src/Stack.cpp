@@ -15,6 +15,14 @@ void Stack::push(Value value){
   stackTop++;
 }
 
+Value Stack::at(int index){
+  return stack[index];
+}
+
+void Stack::set(Value val, int index){
+  stack[index] = val;
+}
+
 Value Stack::pop(){
   stackTop--;
   return *stackTop;

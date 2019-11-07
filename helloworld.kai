@@ -1,5 +1,5 @@
-var foo = "hello";
-var bar = " world";
-var baby = " fuck yerr";
-var foobarbaby = foo + bar + baby;
-print foobarbaby;
+{
+  if(true){
+    print "foobar";
+  }
+}

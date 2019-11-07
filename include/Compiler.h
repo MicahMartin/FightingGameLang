@@ -27,7 +27,7 @@ typedef enum {
 } Precedence;
 
 class Compiler;
-typedef void (Compiler::*ParseFn)();
+typedef void (Compiler::*ParseFn)(bool canAssign);
 
 typedef struct {
   ParseFn prefix;
@@ -57,26 +57,36 @@ private:
 
   uint8_t makeConstant(Value value);
   uint8_t identifierConstant(Token* name);
+  int resolveLocal(Token* name);
+  bool identifiersEqual(Token* a, Token* b);
+  void addLocal(Token name);
   void emitConstant(Value value);
+  int emitJump(uint8_t offset);
 
-  void number();
-  void string();
-  void namedVariable(Token name);
-  void variable();
-  void unary();
-  void binary();
-  void literal();
-  void grouping();
+  void number(bool canAssign);
+  void string(bool canAssign);
+  void namedVariable(Token name, bool canAssign);
+  void variable(bool canAssign);
+  void unary(bool canAssign);
+  void binary(bool canAssign);
+  void literal(bool canAssign);
+  void grouping(bool canAssign);
 
   bool match(TokenType expected);
   bool check(TokenType expected);
 
+  void patchJump(int jumpLength);
   void advance();
   void expressionStatement();
   void expression();
+  void ifStatement();
   void statement();
+  void block();
+  void beginScope();
+  void endScope();
   uint8_t parseVariable(const char* syntaxErrorMessage);
   void defineVariable(uint8_t var);
+  void declareVariable();
   void varDeclaration();
   void declaration();
   void consume(TokenType, const char* syntaxErrorMessage);
@@ -85,6 +95,7 @@ private:
   void errorAtCurrent(const char* message);
   void errorAt(Token* token, const char* message);
   void synchronize();
+  void markInitialized();
 
   ParseRule rules[36] = {
     { &Compiler::grouping, NULL,    PREC_NONE },                  // TOKEN_LEFT_PAREN

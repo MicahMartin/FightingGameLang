@@ -71,15 +71,20 @@ void Compiler::parsePrecedence(Precedence precedence){
     error("Prefix rule is null");
     return;
   }
-
+  bool canAssign = precedence <= PREC_ASSIGNMENT;
   // prefix rule should be Compiler::number
-  (*this.*prefixRule)();
+  (*this.*prefixRule)(canAssign);
 
   while (precedence <= getRule(parser.current.type)->precedence) {
     advance();
     ParseFn infixRule = getRule(parser.previous.type)->infix;
     // theres gotta be a better way to write this lol
-    (*this.*infixRule)();
+    (*this.*infixRule)(canAssign);
+  }
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    error("Invalid assignment target.");
+    expression();
   }
 }
 
@@ -99,17 +104,65 @@ uint8_t Compiler::identifierConstant(Token* name) {
   return makeConstant(val);
 }
 
+int Compiler::resolveLocal(Token* name) {
+  for (int i = scriptPointer->localCount - 1; i >= 0; i--) {   
+    Local* local = &scriptPointer->locals[i];                  
+    if (identifiersEqual(name, &local->name)) {           
+      if (local->depth == -1) {
+        error("Cannot read local variable in its own initializer.");
+      }
+      return i;                                           
+    }                                                     
+  }
+  return -1;                                              
+}
+
+bool Compiler::identifiersEqual(Token* a, Token* b) {
+  if (a->length != b->length) return false;
+  return memcmp(a->start, b->start, a->length) == 0;
+}
+
+void Compiler::addLocal(Token name) {
+  if (scriptPointer->localCount == 256) {
+    error("Too many local variables in function.");
+    return;
+  }
+  Local* local = &scriptPointer->locals[scriptPointer->localCount++];
+  local->name = name;
+  local->depth = -1;
+  local->depth = scriptPointer->scopeDepth;
+}
+
 void Compiler::emitConstant(Value value) {
   uint8_t symbolIndex = makeConstant(value);
   emitBytes(OP_CONSTANT, symbolIndex);
 }
 
-void Compiler::number() {
+void Compiler::patchJump(int offset){
+  // -2 to adjust for the bytecode for the jump offset itself.
+  int jump = currentScript()->code.size() - offset - 2;
+
+  if (jump > UINT16_MAX) {
+    error("Too much code to jump over.");
+  }
+
+  currentScript()->code[offset] = (jump >> 8) & 0xff;
+  currentScript()->code[offset + 1] = jump & 0xff;
+}
+
+int Compiler::emitJump(uint8_t offset) {
+  emitByte(offset);
+  emitByte(0xff);
+  emitByte(0xff);
+  return currentScript()->code.size()- 2;
+}
+
+void Compiler::number(bool canAssign) {
   long value = strtol(parser.previous.start, NULL, 10);
   emitConstant(NUMBER_VAL(value));
 }
 
-void Compiler::string() {
+void Compiler::string(bool canAssign) {
   // TODO: keep a refernce to this somehow
   std::string* stringVal = new std::string(parser.previous.start+1, parser.previous.length-2);
   printf("creating string %s, the address %p\n", stringVal->c_str(), stringVal);
@@ -118,16 +171,31 @@ void Compiler::string() {
   emitConstant(val);
 }
 
-void Compiler::namedVariable(Token name) {
-  uint8_t arg = identifierConstant(&name);
-  emitBytes(OP_GET_GLOBAL, arg);
+void Compiler::namedVariable(Token name, bool canAssign) {
+  uint8_t getOp, setOp;
+  int arg = resolveLocal(&name);
+  if (arg != -1) {
+    getOp = OP_GET_LOCAL;
+    setOp = OP_SET_LOCAL;
+  } else {
+    arg = identifierConstant(&name);
+    getOp = OP_GET_GLOBAL;
+    setOp = OP_SET_GLOBAL;
+  }
+
+  if (canAssign && match(TOKEN_EQUAL)) {
+    expression();
+    emitBytes(setOp, (uint8_t)arg);
+  } else {
+    emitBytes(getOp, (uint8_t)arg);
+  }
 }
 
-void Compiler::variable() {
-  namedVariable(parser.previous);
+void Compiler::variable(bool canAssign) {
+  namedVariable(parser.previous, canAssign);
 }
 
-void Compiler::unary() {
+void Compiler::unary(bool canAssign) {
   TokenType operatorType = parser.previous.type;
 
   // Compile the operand.
@@ -142,7 +210,7 @@ void Compiler::unary() {
   }
 }
 
-void Compiler::binary() {
+void Compiler::binary(bool canAssign) {
   // Remember the operator.
   TokenType operatorType = parser.previous.type;
 
@@ -167,7 +235,7 @@ void Compiler::binary() {
   }
 }
 
-void Compiler::literal() {
+void Compiler::literal(bool canAssign) {
   switch (parser.previous.type) {
     case TOKEN_FALSE: emitByte(OP_FALSE); break;
     case TOKEN_NIL: emitByte(OP_NIL); break;
@@ -177,7 +245,7 @@ void Compiler::literal() {
   }
 }
 
-void Compiler::grouping() {
+void Compiler::grouping(bool canAssign) {
   expression();
   consume(TOKEN_RIGHT_PAREN, "you're missing a ')' after the expression dingus");
 }
@@ -214,20 +282,87 @@ void Compiler::expressionStatement() {
   emitByte(OP_POP);
 }
 
+void Compiler::beginScope(){
+  scriptPointer->scopeDepth++;
+}
+
+void Compiler::endScope(){
+  scriptPointer->scopeDepth--;
+  while (scriptPointer->localCount > 0 && scriptPointer->locals[scriptPointer->localCount - 1].depth > scriptPointer->scopeDepth) {
+    emitByte(OP_POP);
+    scriptPointer->localCount--;
+  }
+}
+
+void Compiler::block(){
+  while (!check(TOKEN_RIGHT_BRACE) && !check(TOKEN_EOF)) {
+    declaration();
+  }
+
+  consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
+}
+
+void Compiler::ifStatement() {
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  int thenJump = emitJump(OP_JUMP_IF_FALSE);
+  statement();
+
+  patchJump(thenJump);
+}
+
 void Compiler::statement() {
   if(match(TOKEN_PRINT)){
     printStatement();
-  } else {
+  } else if (match(TOKEN_IF)) {        
+    ifStatement(); 
+  }
+  else if (match(TOKEN_LEFT_BRACE)) {
+    beginScope();                      
+    block();                           
+    endScope(); 
+  }
+  else {
     expressionStatement();
   }
 }
 
+void Compiler::declareVariable() {
+  // Global variables are implicitly declared.
+  if (scriptPointer->scopeDepth == 0) return;
+
+  Token* name = &parser.previous;
+  for (int i = scriptPointer->localCount - 1; i >= 0; i--) {
+    Local* local = &scriptPointer->locals[i];
+    if (local->depth != -1 && local->depth < scriptPointer->scopeDepth) {
+      break;
+    }
+
+    if (identifiersEqual(name, &local->name)) {
+      error("Variable with this name already declared in this scope.");
+    }
+  }
+  addLocal(*name);
+}
+
 uint8_t Compiler::parseVariable(const char* errorMessage) {
   consume(TOKEN_IDENTIFIER, errorMessage);              
+  declareVariable();
+  if (scriptPointer->scopeDepth > 0) return 0;
   return identifierConstant(&parser.previous);
 }
 
+void Compiler::markInitialized() {
+  scriptPointer->locals[scriptPointer->localCount - 1].depth = scriptPointer->scopeDepth;
+}
+
 void Compiler::defineVariable(uint8_t var) {
+  if (scriptPointer->scopeDepth > 0) {
+    markInitialized();
+    return;
+  }
   emitBytes(OP_DEFINE_GLOBAL, var);
 }
 
