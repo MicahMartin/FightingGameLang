@@ -32,6 +32,29 @@ void Compiler::errorAt(Token* token, const char* message){
   parser.hadError = true;
 }
 
+void Compiler::synchronize(){
+  parser.panicMode = false;
+
+  while (parser.current.type != TOKEN_EOF) {
+    if (parser.previous.type == TOKEN_SEMICOLON) return;
+
+    switch (parser.current.type) {
+      case TOKEN_FUNC:
+      case TOKEN_VAR:
+      case TOKEN_FOR:
+      case TOKEN_IF:
+      case TOKEN_WHILE:
+      case TOKEN_PRINT:
+      case TOKEN_RETURN:
+      return;
+
+      default: ; //nothing
+    }
+
+    advance();
+  }
+}
+
 Script* Compiler::currentScript(){
   return scriptPointer;
 }
@@ -70,6 +93,10 @@ uint8_t Compiler::makeConstant(Value value) {
   return symbolIndex;
 }
 
+uint8_t Compiler::identifierConstant(Token* name) {
+  return makeConstant(OBJ_VAL(Object::copyString(name->start, name->length, recordListPointer, stringTablePointer)));
+}
+
 void Compiler::emitConstant(Value value) {
   uint8_t symbolIndex = makeConstant(value);
   emitBytes(OP_CONSTANT, symbolIndex);
@@ -86,6 +113,14 @@ void Compiler::string() {
   printf("stringTableSize after: %ld\n", stringTablePointer->size());
 }
 
+void Compiler::namedVariable(Token name) {
+  uint8_t arg = identifierConstant(&name);
+  emitBytes(OP_GET_GLOBAL, arg);
+}
+
+void Compiler::variable() {
+  namedVariable(parser.previous);
+}
 
 void Compiler::unary() {
   TokenType operatorType = parser.previous.type;
@@ -168,14 +203,49 @@ void Compiler::expression() {
   parsePrecedence(PREC_ASSIGNMENT);
 }
 
+void Compiler::expressionStatement() {
+  expression();
+  consume(TOKEN_SEMICOLON, "Expect ';' after expression.");
+  emitByte(OP_POP);
+}
+
 void Compiler::statement() {
   if(match(TOKEN_PRINT)){
     printStatement();
+  } else {
+    expressionStatement();
   }
 }
 
+uint8_t Compiler::parseVariable(const char* errorMessage) {
+  consume(TOKEN_IDENTIFIER, errorMessage);              
+  return identifierConstant(&parser.previous);
+}
+
+void Compiler::defineVariable(uint8_t var) {
+  emitBytes(OP_DEFINE_GLOBAL, var);
+}
+
+void Compiler::varDeclaration() {
+  uint8_t global = parseVariable("Expect variable name.");
+
+  if (match(TOKEN_EQUAL)) {
+    expression();
+  } else {
+    emitByte(OP_NIL);
+  }
+  consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
+
+  defineVariable(global);
+}
+
 void Compiler::declaration() {
-  statement();
+  if (match(TOKEN_VAR)) {
+    varDeclaration();
+  } else {
+    statement();
+  }
+  if (parser.panicMode) synchronize();
 }
 
 
@@ -201,7 +271,8 @@ bool Compiler::compile(const char *source, Script* script){
   }
   emitByte(OP_RETURN);
   if (!parser.hadError) {
-    script->disassembleScript("mainScript");
+    printf("good compile\n");
+    // script->disassembleScript("mainScript");
   }
   return !parser.hadError;
 }

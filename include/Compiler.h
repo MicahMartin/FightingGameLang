@@ -62,10 +62,13 @@ private:
 
 
   uint8_t makeConstant(Value value);
+  uint8_t identifierConstant(Token* name);
   void emitConstant(Value value);
 
   void number();
   void string();
+  void namedVariable(Token name);
+  void variable();
   void unary();
   void binary();
   void literal();
@@ -75,14 +78,19 @@ private:
   bool check(TokenType expected);
 
   void advance();
+  void expressionStatement();
   void expression();
   void statement();
+  uint8_t parseVariable(const char* syntaxErrorMessage);
+  void defineVariable(uint8_t var);
+  void varDeclaration();
   void declaration();
   void consume(TokenType, const char* syntaxErrorMessage);
 
   void error(const char* message);
   void errorAtCurrent(const char* message);
   void errorAt(Token* token, const char* message);
+  void synchronize();
 
   ParseRule rules[36] = {
     { &Compiler::grouping, NULL,    PREC_NONE },                  // TOKEN_LEFT_PAREN
@@ -103,7 +111,7 @@ private:
     { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_GREATER_EQUAL
     { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_LESS
     { NULL,     &Compiler::binary,    PREC_COMPARISON },                             // TOKEN_LESS_EQUAL
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_IDENTIFIER
+    { &Compiler::variable,     NULL,    PREC_NONE },                             // TOKEN_IDENTIFIER
     { &Compiler::string,     NULL,    PREC_NONE },                             // TOKEN_STRING
     { &Compiler::number,   NULL,    PREC_NONE },                  // TOKEN_NUMBER
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_AND

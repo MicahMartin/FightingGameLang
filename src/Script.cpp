@@ -58,6 +58,12 @@ int Script::disassembleInstruction(int offset){
       return simpleInstruction("OP_TRUE", offset);
     case OP_FALSE:
       return simpleInstruction("OP_FALSE", offset);
+    case OP_POP:
+      return simpleInstruction("OP_POP", offset);
+    case OP_DEFINE_GLOBAL:
+      return symbolInstruction("OP_DEFINE_GLOBAL", offset);
+    case OP_GET_GLOBAL:
+      return symbolInstruction("OP_GET_GLOBAL", offset);
     case OP_EQUAL:
       return simpleInstruction("OP_EQUAL", offset);
     case OP_GREATER:

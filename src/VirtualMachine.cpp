@@ -82,10 +82,11 @@ inline ExecutionCode VirtualMachine::run(){
   // lets go fast bb
   #define READ_BYTE() (*instructionPointer++)
   #define READ_SYMBOL() (scriptPointer->symbols[READ_BYTE()])
+  #define READ_STRING() AS_STRING(READ_SYMBOL())
   #define BINARY_OP(valueType, op) \
     do { \
       if (!IS_NUMBER(stack.peek(0)) || !IS_NUMBER(stack.peek(1))) { \
-        runtimeError("Gotta use numbers for binary operands my G, strings coming soon"); \
+        runtimeError("how did you get here??"); \
         return EC_RUNTIME_ERROR; \
       } \
       long b = AS_NUMBER(stack.pop()); \
@@ -116,6 +117,29 @@ inline ExecutionCode VirtualMachine::run(){
       case OP_NIL: stack.push(NIL_VAL); break;
       case OP_TRUE: stack.push(BOOL_VAL(true)); break;
       case OP_FALSE: stack.push(BOOL_VAL(false)); break;
+      case OP_POP: stack.pop(); break;
+      case OP_GET_GLOBAL: {
+        ObjString* name = READ_STRING();
+        printf("looking for variable %s\n", name->chars);
+        for (auto i : globals) {
+          printf("wtf %s\n", AS_STRING(i.second)->chars);
+        }
+        auto globalVal  = globals.find(name);
+        printf("what is the value we just got tho %s\n", AS_STRING(globalVal->second)->chars);
+        if (globalVal == globals.end()) {
+          runtimeError("Undefined variable '%s'.", name->chars);
+          return EC_RUNTIME_ERROR;
+        }
+        stack.push(globalVal->second);
+        break;
+      }
+      case OP_DEFINE_GLOBAL: {               
+        ObjString* name = READ_STRING();
+        // printf("defining global %s:%s\n", name->chars, AS_STRING(stack.peek(0))->chars);
+        globals.insert(std::make_pair(name, stack.peek(0)));
+        stack.pop();
+        break;                               
+      }                                      
       case OP_EQUAL: {
         Value b = stack.pop();
         Value a = stack.pop();
@@ -164,6 +188,7 @@ inline ExecutionCode VirtualMachine::run(){
   }
 
   #undef READ_BYTE
+  #undef READ_STRING
   #undef READ_SYMBOL
   #undef BINARY_OP
 }
