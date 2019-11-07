@@ -1,5 +1,4 @@
 #include "VirtualMachine.h"
-#include "Object.h"
 
 
 VirtualMachine::VirtualMachine(){}
@@ -50,17 +49,12 @@ inline bool VirtualMachine::isFalsey(Value value) {
 }
 
 void VirtualMachine::concatenate() {
-  ObjString* b = AS_STRING(stack.pop());
-  ObjString* a = AS_STRING(stack.pop());
-
-  int length = a->length + b->length;
-  char* chars = ALLOCATE(char, length + 1);
-  memcpy(chars, a->chars, a->length);
-  memcpy(chars + a->length, b->chars, b->length);
-  chars[length] = '\0';
-
-  ObjString* result = Object::takeString(chars, length, &noMemoryLeaks, &stringTable);
-  stack.push(OBJ_VAL(result));
+  std::string* b = AS_STRING(stack.pop());
+  std::string* a = AS_STRING(stack.pop());
+  // TODO: intern for garbage collection
+  std::string* newString = new std::string(*a + *b);
+  printf("the newString %s\n", newString->c_str());
+  stack.push(STRING_VAL(newString));
 }
 
 inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
@@ -70,11 +64,7 @@ inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
     case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
     case VAL_NIL:    return true;
     case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
-    case VAL_OBJ: {
-      ObjString* aString = AS_STRING(valueA);
-      ObjString* bString = AS_STRING(valueB);
-      return aString->length == bString->length && memcmp(aString->chars, bString->chars, aString->length) == 0;
-    }
+    case VAL_STRING: return  *(AS_STRING(valueA)) == *(AS_STRING(valueB));
   }
 }
 
@@ -96,16 +86,16 @@ inline ExecutionCode VirtualMachine::run(){
     } while (false)
 
   for (;;) {
-    if (debugMode) { 
-      printf("          ");
-      for (Value* slot = stack.stack; slot < stack.stackTop; slot++) {
-        printf("[ ");
-        ValueFn::printValue(*slot);
-        printf(" ]");
-      }
-      printf("\n");
-      scriptPointer->disassembleInstruction((int)(instructionPointer - scriptPointer->scriptStart()));
-    }
+    //if (debugMode) { 
+    //  printf("          ");
+    //  for (Value* slot = stack.stack; slot < stack.stackTop; slot++) {
+    //    printf("[ ");
+    //    ValueFn::printValue(*slot);
+    //    printf(" ]");
+    //  }
+    //  printf("\n");
+    //  scriptPointer->disassembleInstruction((int)(instructionPointer - scriptPointer->scriptStart()));
+    //}
 
     uint8_t instruction;
     switch (instruction = READ_BYTE()) {
@@ -119,24 +109,23 @@ inline ExecutionCode VirtualMachine::run(){
       case OP_FALSE: stack.push(BOOL_VAL(false)); break;
       case OP_POP: stack.pop(); break;
       case OP_GET_GLOBAL: {
-        ObjString* name = READ_STRING();
-        printf("looking for variable %s\n", name->chars);
-        for (auto i : globals) {
-          printf("wtf %s\n", AS_STRING(i.second)->chars);
-        }
-        auto globalVal  = globals.find(name);
-        printf("what is the value we just got tho %s\n", AS_STRING(globalVal->second)->chars);
-        if (globalVal == globals.end()) {
-          runtimeError("Undefined variable '%s'.", name->chars);
+        std::string* name = READ_STRING();
+        printf("looking for variable %s\n", name->c_str());
+//        for (auto i : scriptPointer->globals) {
+//          printf("wtf %s\n", AS_STRING(i.second)->chars);
+//        }
+        auto globalVal = scriptPointer->globals.find(*name);
+        if (globalVal == scriptPointer->globals.end()) {
+          runtimeError("Undefined variable '%s'.", name->c_str());
           return EC_RUNTIME_ERROR;
         }
         stack.push(globalVal->second);
         break;
       }
       case OP_DEFINE_GLOBAL: {               
-        ObjString* name = READ_STRING();
+        std::string* name = READ_STRING();
         // printf("defining global %s:%s\n", name->chars, AS_STRING(stack.peek(0))->chars);
-        globals.insert(std::make_pair(name, stack.peek(0)));
+        scriptPointer->globals.insert(std::make_pair(*name, stack.peek(0)));
         stack.pop();
         break;                               
       }                                      
@@ -196,8 +185,6 @@ inline ExecutionCode VirtualMachine::run(){
 ExecutionCode VirtualMachine::execute(const char* source){
   // TODO: Script array, one script for each character state, one big script for input
   Script script;
-  compiler.setRecordListPointer(&noMemoryLeaks);
-  compiler.setStringTablePointer(&stringTable);
 
   if (!compiler.compile(source, &script)) {
     return EC_COMPILE_ERROR;

@@ -1,5 +1,4 @@
 #include "Compiler.h"
-#include "Object.h"
 
 
 Compiler::Compiler(){}
@@ -89,12 +88,15 @@ ParseRule* Compiler::getRule(TokenType type) {
 }
 
 uint8_t Compiler::makeConstant(Value value) {
+  printf("writing symbol.. %s\n", value.as.string->c_str());
   uint8_t symbolIndex = scriptPointer->writeSymbol(value);
   return symbolIndex;
 }
 
 uint8_t Compiler::identifierConstant(Token* name) {
-  return makeConstant(OBJ_VAL(Object::copyString(name->start, name->length, recordListPointer, stringTablePointer)));
+  std::string* stringVal = new std::string(name->start, name->length);
+  Value val = STRING_VAL(stringVal);
+  return makeConstant(val);
 }
 
 void Compiler::emitConstant(Value value) {
@@ -108,9 +110,12 @@ void Compiler::number() {
 }
 
 void Compiler::string() {
-  printf("stringTableSize before: %ld\n", stringTablePointer->size());
-  emitConstant(OBJ_VAL(Object::copyString(parser.previous.start+1, parser.previous.length-2, recordListPointer, stringTablePointer)));
-  printf("stringTableSize after: %ld\n", stringTablePointer->size());
+  // TODO: keep a refernce to this somehow
+  std::string* stringVal = new std::string(parser.previous.start+1, parser.previous.length-2);
+  printf("creating string %s, the address %p\n", stringVal->c_str(), stringVal);
+  Value val = STRING_VAL(stringVal);
+  printf("creating string on some weird shit?? %s, the address %p\n", val.as.string->c_str(), val.as.string);
+  emitConstant(val);
 }
 
 void Compiler::namedVariable(Token name) {
@@ -271,8 +276,7 @@ bool Compiler::compile(const char *source, Script* script){
   }
   emitByte(OP_RETURN);
   if (!parser.hadError) {
-    printf("good compile\n");
-    // script->disassembleScript("mainScript");
+    script->disassembleScript("mainScript");
   }
   return !parser.hadError;
 }
@@ -286,10 +290,3 @@ void Compiler::emitBytes(uint8_t firstByte, uint8_t secondByte) {
   emitByte(secondByte);
 }
 
-void Compiler::setRecordListPointer(std::forward_list<Obj*>* pointer){
-  recordListPointer = pointer;
-}
-
-void Compiler::setStringTablePointer(std::unordered_map<sObjString*, Value>* pointer){
-  stringTablePointer = pointer;
-}

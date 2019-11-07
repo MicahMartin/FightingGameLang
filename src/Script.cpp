@@ -12,6 +12,7 @@ void Script::writeByte(uint8_t byte, int lineNumber){
 }
 
 uint8_t Script::writeSymbol(Value value){
+  printf("writing symbol %s\n", value.as.string->c_str());
   symbols.push_back(value);
   return symbols.size() - 1;
 }

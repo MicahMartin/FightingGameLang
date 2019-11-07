@@ -2,6 +2,7 @@
 #define _Script_h
 
 #include <vector>
+#include <unordered_map>
 #include "Common.h"
 #include "Value.h"
 
@@ -44,6 +45,8 @@ public:
   void disassembleScript(const char* name);
 
   std::vector<Value> symbols;
+  std::unordered_map<std::string, Value> globals;
+  std::vector<Value> locals;
   std::vector<int> lines;
 private:
   std::vector<uint8_t> code;

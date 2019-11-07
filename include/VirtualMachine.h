@@ -37,10 +37,6 @@ private:
   Compiler compiler;
   Stack stack;
   //TODO: Free these objects
-  std::forward_list<Obj*> noMemoryLeaks;
-  //TODO: Intern strings and free
-  std::unordered_map<ObjString*, Value> stringTable;
-  std::unordered_map<ObjString*, Value> globals;
 };
 
 #endif

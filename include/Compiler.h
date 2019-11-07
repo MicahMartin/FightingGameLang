@@ -4,8 +4,6 @@
 #include "Common.h"
 #include "Scanner.h"
 #include "Script.h"
-#include <forward_list>
-#include <unordered_map>
 
 typedef struct {
   Token current;
@@ -45,16 +43,12 @@ public:
   bool compile(const char* source, Script* script);
   void emitByte(uint8_t byte);
   void emitBytes(uint8_t firstByte, uint8_t secondByte);
-  void setRecordListPointer(std::forward_list<Obj*>* recordListPointer);
-  void setStringTablePointer(std::unordered_map<sObjString*, Value>* stringTablePointer);
   Script* currentScript();
 
 private:
   Scanner scanner;
   Parser parser;
   Script* scriptPointer;
-  std::forward_list<Obj*>* recordListPointer;
-  std::unordered_map<sObjString*, Value>* stringTablePointer;
 
   void printStatement();
   void parsePrecedence(Precedence precedence);
