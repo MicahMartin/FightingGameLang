@@ -4,66 +4,6 @@
 Compiler::Compiler(){}
 Compiler::~Compiler(){}
 
-void Compiler::error(const char* message) {
-  errorAt(&parser.previous, message);
-}
-
-void Compiler::errorAtCurrent(const char* message){
-  errorAt(&parser.current, message);
-}
-
-
-void Compiler::errorAt(Token* token, const char* message){
-  if (parser.panicMode) return;
-  parser.panicMode = true;
-
-  fprintf(stderr, "[line %d] Error", token->line);
-
-  if (token->type == TOKEN_EOF) {
-    fprintf(stderr, " at end");
-  } else if (token->type == TOKEN_ERROR) {
-    // Nothing.
-  } else {
-    fprintf(stderr, " at '%.*s'", token->length, token->start);
-  }
-
-  fprintf(stderr, ": %s\n", message);
-  parser.hadError = true;
-}
-
-void Compiler::synchronize(){
-  parser.panicMode = false;
-
-  while (parser.current.type != TOKEN_EOF) {
-    if (parser.previous.type == TOKEN_SEMICOLON) return;
-
-    switch (parser.current.type) {
-      case TOKEN_FUNC:
-      case TOKEN_VAR:
-      case TOKEN_FOR:
-      case TOKEN_IF:
-      case TOKEN_WHILE:
-      case TOKEN_PRINT:
-      case TOKEN_RETURN:
-      return;
-
-      default: ; //nothing
-    }
-
-    advance();
-  }
-}
-
-Script* Compiler::currentScript(){
-  return scriptPointer;
-}
-
-void Compiler::printStatement(){
-  expression();
-  consume(TOKEN_SEMICOLON, "expected ; after value");
-  emitByte(OP_PRINT);
-}
-
 void Compiler::parsePrecedence(Precedence precedence){
   advance();
   printf("looking for prefix rule\n");
@@ -523,6 +463,67 @@ bool Compiler::compile(const char *source, Script* script){
     script->disassembleScript("mainScript");
   }
   return !parser.hadError;
+}
+
+
+void Compiler::error(const char* message) {
+  errorAt(&parser.previous, message);
+}
+
+void Compiler::errorAtCurrent(const char* message){
+  errorAt(&parser.current, message);
+}
+
+
+void Compiler::errorAt(Token* token, const char* message){
+  if (parser.panicMode) return;
+  parser.panicMode = true;
+
+  fprintf(stderr, "[line %d] Error", token->line);
+
+  if (token->type == TOKEN_EOF) {
+    fprintf(stderr, " at end");
+  } else if (token->type == TOKEN_ERROR) {
+    // Nothing.
+  } else {
+    fprintf(stderr, " at '%.*s'", token->length, token->start);
+  }
+
+  fprintf(stderr, ": %s\n", message);
+  parser.hadError = true;
+}
+
+void Compiler::synchronize(){
+  parser.panicMode = false;
+
+  while (parser.current.type != TOKEN_EOF) {
+    if (parser.previous.type == TOKEN_SEMICOLON) return;
+
+    switch (parser.current.type) {
+      case TOKEN_FUNC:
+      case TOKEN_VAR:
+      case TOKEN_FOR:
+      case TOKEN_IF:
+      case TOKEN_WHILE:
+      case TOKEN_PRINT:
+      case TOKEN_RETURN:
+      return;
+
+      default: ; //nothing
+    }
+
+    advance();
+  }
+}
+
+Script* Compiler::currentScript(){
+  return scriptPointer;
+}
+
+void Compiler::printStatement(){
+  expression();
+  consume(TOKEN_SEMICOLON, "expected ; after value");
+  emitByte(OP_PRINT);
 }
 
 void Compiler::emitByte(uint8_t byte) {

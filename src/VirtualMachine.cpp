@@ -86,7 +86,6 @@ inline ExecutionCode VirtualMachine::run(){
       } \
       long b = AS_NUMBER(stack.pop()); \
       long a = AS_NUMBER(stack.pop()); \
-      printf("doing %ld op %ld\n", a, b); \
       stack.push(valueType(a op b)); \
     } while (false)
 
@@ -145,7 +144,6 @@ inline ExecutionCode VirtualMachine::run(){
         break;                               
       }                                      
       case OP_SET_GLOBAL: {               
-        printf("defining global\n");
         std::string* name = READ_STRING();
         auto globalVal = scriptPointer->globals.find(*name);
         if (globalVal == scriptPointer->globals.end()) {
@@ -235,10 +233,6 @@ ExecutionCode VirtualMachine::execute(const char* source){
   instructionPointer = scriptPointer->scriptStart();
 
   ExecutionCode result = run();
-  printf("ran good once\n");
-  instructionPointer = scriptPointer->scriptStart();
-  ExecutionCode result2 = run();
-  printf("ran good twice?\n");
   // TODO: account for constant table / string table
   return EC_OK;
 };

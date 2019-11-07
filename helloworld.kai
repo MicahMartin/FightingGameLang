@@ -1,3 +1,12 @@
-for(var foo=0; foo<100; foo = foo +1){
-  print "hello";
+{
+  var foo = "hello ";
+  var bar = "w-";
+  var foobar = foo + bar;
+
+  for(var i = 0; i < 3; i = i+1){
+    foobar = foobar + bar;
+  }
+  foobar = foobar + "orld!";
+
+  print foobar;
 }
