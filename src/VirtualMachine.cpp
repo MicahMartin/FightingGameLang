@@ -145,8 +145,8 @@ inline ExecutionCode VirtualMachine::run(){
         break;                               
       }                                      
       case OP_SET_GLOBAL: {               
+        printf("defining global\n");
         std::string* name = READ_STRING();
-        // printf("defining global %s:%s\n", name->chars, AS_STRING(stack.peek(0))->chars);
         auto globalVal = scriptPointer->globals.find(*name);
         if (globalVal == scriptPointer->globals.end()) {
           runtimeError("Undefined variable '%s'.", name->c_str());
@@ -199,6 +199,16 @@ inline ExecutionCode VirtualMachine::run(){
       case OP_JUMP_IF_FALSE: {
         uint16_t offset = READ_SHORT();
         if (isFalsey(stack.peek(0))) instructionPointer  += offset;
+        break;
+      }
+      case OP_JUMP: {
+        uint16_t offset = READ_SHORT();
+        instructionPointer += offset;
+        break;
+      }
+      case OP_LOOP: {
+        uint16_t offset = READ_SHORT();
+        instructionPointer -= offset;
         break;
       }
       case OP_RETURN: {

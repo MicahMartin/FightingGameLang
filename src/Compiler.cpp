@@ -66,14 +66,17 @@ void Compiler::printStatement(){
 
 void Compiler::parsePrecedence(Precedence precedence){
   advance();
+  printf("looking for prefix rule\n");
   ParseFn prefixRule = getRule(parser.previous.type)->prefix;
   if (prefixRule == NULL) {
     error("Prefix rule is null");
     return;
   }
   bool canAssign = precedence <= PREC_ASSIGNMENT;
+  printf("canassign is %d\n", canAssign);
   // prefix rule should be Compiler::number
   (*this.*prefixRule)(canAssign);
+  printf("called some prefixRule\n");
 
   while (precedence <= getRule(parser.current.type)->precedence) {
     advance();
@@ -86,6 +89,8 @@ void Compiler::parsePrecedence(Precedence precedence){
     error("Invalid assignment target.");
     expression();
   }
+
+  printf("welp\n");
 }
 
 ParseRule* Compiler::getRule(TokenType type) {
@@ -93,7 +98,6 @@ ParseRule* Compiler::getRule(TokenType type) {
 }
 
 uint8_t Compiler::makeConstant(Value value) {
-  printf("writing symbol.. %s\n", value.as.string->c_str());
   uint8_t symbolIndex = scriptPointer->writeSymbol(value);
   return symbolIndex;
 }
@@ -134,6 +138,7 @@ void Compiler::addLocal(Token name) {
 }
 
 void Compiler::emitConstant(Value value) {
+  printf("in emitConstant\n");
   uint8_t symbolIndex = makeConstant(value);
   emitBytes(OP_CONSTANT, symbolIndex);
 }
@@ -158,11 +163,14 @@ int Compiler::emitJump(uint8_t offset) {
 }
 
 void Compiler::number(bool canAssign) {
+  printf("in number\n");
   long value = strtol(parser.previous.start, NULL, 10);
+  printf("working with val %ld \n", value);
   emitConstant(NUMBER_VAL(value));
 }
 
 void Compiler::string(bool canAssign) {
+  printf("in string\n");
   // TODO: keep a refernce to this somehow
   std::string* stringVal = new std::string(parser.previous.start+1, parser.previous.length-2);
   printf("creating string %s, the address %p\n", stringVal->c_str(), stringVal);
@@ -192,10 +200,12 @@ void Compiler::namedVariable(Token name, bool canAssign) {
 }
 
 void Compiler::variable(bool canAssign) {
+  printf("in variable\n");
   namedVariable(parser.previous, canAssign);
 }
 
 void Compiler::unary(bool canAssign) {
+  printf("in unary\n");
   TokenType operatorType = parser.previous.type;
 
   // Compile the operand.
@@ -250,6 +260,25 @@ void Compiler::grouping(bool canAssign) {
   consume(TOKEN_RIGHT_PAREN, "you're missing a ')' after the expression dingus");
 }
 
+void Compiler::logicalOr(bool canAssign){
+  int elseJump = emitJump(OP_JUMP_IF_FALSE);
+  int endJump = emitJump(OP_JUMP);
+
+  patchJump(elseJump);
+  emitByte(OP_POP);
+
+  parsePrecedence(PREC_OR);
+  patchJump(endJump);
+}
+
+void Compiler::logicalAnd(bool canAssign){
+  int endJump = emitJump(OP_JUMP_IF_FALSE);
+
+  emitByte(OP_POP);
+  parsePrecedence(PREC_AND);
+
+  patchJump(endJump);
+}
 
 bool Compiler::check(TokenType expected) {
   return parser.current.type == expected;
@@ -273,6 +302,7 @@ void Compiler::advance() {
 }
 
 void Compiler::expression() {
+  printf("in expression\n");
   parsePrecedence(PREC_ASSIGNMENT);
 }
 
@@ -302,21 +332,97 @@ void Compiler::block(){
   consume(TOKEN_RIGHT_BRACE, "Expect '}' after block.");
 }
 
+void Compiler::whileStatement() {
+  int loopStart = currentScript()->code.size();
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'while'.");
+  expression();
+  consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
+
+  int exitJump = emitJump(OP_JUMP_IF_FALSE);
+
+  emitByte(OP_POP);
+  statement();
+  emitLoop(loopStart);
+
+
+  patchJump(exitJump);
+  emitByte(OP_POP);
+}
+
 void Compiler::ifStatement() {
   consume(TOKEN_LEFT_PAREN, "Expect '(' after 'if'.");
   expression();
   consume(TOKEN_RIGHT_PAREN, "Expect ')' after condition.");
 
   int thenJump = emitJump(OP_JUMP_IF_FALSE);
+  emitByte(OP_POP);
   statement();
+  int elseJump = emitJump(OP_JUMP);
+
 
   patchJump(thenJump);
+  emitByte(OP_POP);
+  if (match(TOKEN_ELSE)) statement();
+  patchJump(elseJump);
+}
+
+void Compiler::forStatement() {
+  beginScope();
+
+  consume(TOKEN_LEFT_PAREN, "Expect '(' after 'for'.");
+  if (match(TOKEN_SEMICOLON)) {
+    // No initializer.
+  } else if (match(TOKEN_VAR)) {
+    varDeclaration();
+    printf("var declared\n");
+  } else {
+    expressionStatement();
+  }
+
+  int loopStart = scriptPointer->code.size();
+  int exitJump = -1;
+  if (!match(TOKEN_SEMICOLON)) {
+    expression();
+    consume(TOKEN_SEMICOLON, "Expect ';' after loop condition.");
+
+    // Jump out of the loop if the condition is false.
+    exitJump = emitJump(OP_JUMP_IF_FALSE);
+    emitByte(OP_POP); // Condition.
+  }
+
+  if (!match(TOKEN_RIGHT_PAREN)) {
+    int bodyJump = emitJump(OP_JUMP);
+
+    int incrementStart = currentScript()->code.size();
+    expression();
+    emitByte(OP_POP);
+    consume(TOKEN_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+    emitLoop(loopStart);
+    loopStart = incrementStart;
+    patchJump(bodyJump);
+  }
+
+  statement();
+  emitLoop(loopStart);
+
+  if (exitJump != -1) {
+    patchJump(exitJump);
+    emitByte(OP_POP); // Condition.
+  }
+  endScope();
 }
 
 void Compiler::statement() {
   if(match(TOKEN_PRINT)){
     printStatement();
-  } else if (match(TOKEN_IF)) {        
+  } else if (match(TOKEN_FOR)) {
+    forStatement();
+  } else if (match(TOKEN_WHILE)) {     
+    whileStatement();
+  }
+  else if (match(TOKEN_IF)) {        
     ifStatement(); 
   }
   else if (match(TOKEN_LEFT_BRACE)) {
@@ -367,7 +473,9 @@ void Compiler::defineVariable(uint8_t var) {
 }
 
 void Compiler::varDeclaration() {
+  printf("in var decl\n");
   uint8_t global = parseVariable("Expect variable name.");
+  printf("declreddd\n");
 
   if (match(TOKEN_EQUAL)) {
     expression();
@@ -376,6 +484,7 @@ void Compiler::varDeclaration() {
   }
   consume(TOKEN_SEMICOLON, "Expect ';' after variable declaration.");
 
+  printf("about to define\n");
   defineVariable(global);
 }
 
@@ -423,5 +532,15 @@ void Compiler::emitByte(uint8_t byte) {
 void Compiler::emitBytes(uint8_t firstByte, uint8_t secondByte) {
   emitByte(firstByte);
   emitByte(secondByte);
+}
+
+void Compiler::emitLoop(int loopStart) {
+  emitByte(OP_LOOP);
+
+  int offset = currentScript()->code.size() - loopStart + 2;
+  if (offset > UINT16_MAX) error("Loop body too large.");
+
+  emitByte((offset >> 8) & 0xff);
+  emitByte(offset & 0xff);
 }
 

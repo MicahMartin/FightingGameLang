@@ -61,16 +61,19 @@ private:
   bool identifiersEqual(Token* a, Token* b);
   void addLocal(Token name);
   void emitConstant(Value value);
+  void emitLoop(int loopStart);
   int emitJump(uint8_t offset);
 
   void number(bool canAssign);
   void string(bool canAssign);
-  void namedVariable(Token name, bool canAssign);
   void variable(bool canAssign);
   void unary(bool canAssign);
   void binary(bool canAssign);
   void literal(bool canAssign);
   void grouping(bool canAssign);
+  void logicalOr(bool canAssign);
+  void logicalAnd(bool canAssign);
+  void namedVariable(Token name, bool canAssign);
 
   bool match(TokenType expected);
   bool check(TokenType expected);
@@ -79,6 +82,8 @@ private:
   void advance();
   void expressionStatement();
   void expression();
+  void whileStatement();
+  void forStatement();
   void ifStatement();
   void statement();
   void block();
@@ -119,14 +124,14 @@ private:
     { &Compiler::variable,     NULL,    PREC_NONE },                             // TOKEN_IDENTIFIER
     { &Compiler::string,     NULL,    PREC_NONE },                             // TOKEN_STRING
     { &Compiler::number,   NULL,    PREC_NONE },                  // TOKEN_NUMBER
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_AND
+    { NULL,     &Compiler::logicalAnd,    PREC_AND},                             // TOKEN_AND
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_ELSE
     { &Compiler::literal,     NULL,    PREC_NONE },                             // TOKEN_FALSE
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_FOR
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_FUN
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_IF
     { &Compiler::literal,     NULL,    PREC_NONE },                             // TOKEN_NIL
-    { NULL,     NULL,    PREC_NONE },                             // TOKEN_OR
+    { NULL,     &Compiler::logicalOr,    PREC_OR},                             // TOKEN_OR
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_PRINT
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_RETURN
     { &Compiler::literal,     NULL,    PREC_NONE },                             // TOKEN_TRUE

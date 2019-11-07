@@ -12,7 +12,6 @@ void Script::writeByte(uint8_t byte, int lineNumber){
 }
 
 uint8_t Script::writeSymbol(Value value){
-  printf("writing symbol %s\n", value.as.string->c_str());
   symbols.push_back(value);
   return symbols.size() - 1;
 }
@@ -22,11 +21,19 @@ uint8_t* Script::scriptStart(){
 }
 /************************************** debugging *************************************/
 // TODO - template based debuggre
+int Script::jumpInstruction(const char* name, int sign, int offset) {                              
+  uint16_t jump = (uint16_t)(code[offset + 1] << 8);           
+  jump |= code[offset + 2];                                    
+  printf("%-16s %4d -> %d\n", name, offset, offset + 3 + sign * jump);
+  return offset + 3;                                                  
+}
+
 int Script::byteInstruction(const char* name, int offset) {
   uint8_t slot = code[offset + 1];
   printf("%-16s %4d\n", name, slot);
   return offset + 2;
 }
+
 int Script::symbolInstruction(const char* name, int offset) {
   // get operand (symbol index)
   uint8_t symbolIndex = code[++offset];
@@ -96,6 +103,12 @@ int Script::disassembleInstruction(int offset){
       return simpleInstruction("OP_NEGATE", offset);
     case OP_PRINT:
       return simpleInstruction("OP_PRINT", offset);
+    case OP_JUMP:
+      return jumpInstruction("OP_JUMP", 1, offset);
+    case OP_JUMP_IF_FALSE:
+      return jumpInstruction("OP_JUMP_IF_FALSE", 1, offset);
+    case OP_LOOP:
+      return jumpInstruction("OP_LOOP", -1, offset);
     case OP_RETURN:
       return simpleInstruction("OP_RETURN", offset);
       break;

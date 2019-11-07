@@ -29,6 +29,8 @@ typedef enum {
   OP_NEGATE,
   OP_PRINT,
   OP_JUMP_IF_FALSE,
+  OP_JUMP,
+  OP_LOOP,
   OP_RETURN
 } OpCode;
 
@@ -49,9 +51,11 @@ public:
   uint8_t* scriptStart();
   // debugging
   // TODO: abstract to template based debugger
+  int jumpInstruction(const char* name, int sign, int offset);
   int byteInstruction(const char* name, int offset);
   int symbolInstruction(const char* name, int offset);
   int simpleInstruction(const char* name, int offset);
+
   int disassembleInstruction(int offset);
   void disassembleScript(const char* name);
 
