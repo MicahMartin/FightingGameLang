@@ -5,68 +5,6 @@ VirtualMachine::VirtualMachine(){}
 
 VirtualMachine::~VirtualMachine(){}
 
-//void VirtualMachine::repl(){
-//  char line[1024];
-//  for (;;) {
-//    printf("> ");
-//
-//    if (!fgets(line, sizeof(line), stdin)) {
-//      printf("\n");
-//      break;
-//    }
-//
-//    execute(line);
-//  }
-//}
-//
-//static char* readFile(const char* path);
-//void VirtualMachine::runFile(const char *path){
-//  char* source = readFile(path);
-//  ExecutionCode result = execute(source);
-//  // free(source);
-//
-//  if (result == EC_COMPILE_ERROR) exit(65);
-//  if (result == EC_RUNTIME_ERROR) exit(70);
-//  delete source;
-//}
-
-void VirtualMachine::runtimeError(const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-  fputs("\n", stderr);
-
-  size_t instruction = instructionPointer - scriptPointer->scriptStart();
-  int line = scriptPointer->lines[instruction];
-  fprintf(stderr, "[line %d] in script\n", line);
-
-  stack.reset();
-}
-
-inline bool VirtualMachine::isFalsey(Value value) {
-  return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
-}
-
-void VirtualMachine::concatenate() {
-  std::string* b = AS_STRING(stack.pop());
-  std::string* a = AS_STRING(stack.pop());
-  // TODO: intern for garbage collection
-  std::string* newString = new std::string(*a + *b);
-  stack.push(STRING_VAL(newString));
-}
-
-inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
-  if (valueA.type != valueB.type) return false;
-
-  switch (valueA.type) {
-    case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
-    case VAL_NIL:    return true;
-    case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
-    case VAL_STRING: return  *(AS_STRING(valueA)) == *(AS_STRING(valueB));
-  }
-}
-
 inline ExecutionCode VirtualMachine::run(){
   const char* unreachable = R""""(If you're seeing this, the code is in what I thought was an unreachable state. 
   I could give you advice for what to do. But honestly, why should you trust me? I clearly screwed this up. 
@@ -223,6 +161,7 @@ inline ExecutionCode VirtualMachine::run(){
 }
 
 ExecutionCode VirtualMachine::execute(Script* script){
+  // give me pointer to a compiled script and ima run that
   scriptPointer = script;
   instructionPointer = scriptPointer->scriptStart();
 
@@ -230,3 +169,65 @@ ExecutionCode VirtualMachine::execute(Script* script){
   // TODO: account for constant table / string table
   return EC_OK;
 };
+
+//void VirtualMachine::repl(){
+//  char line[1024];
+//  for (;;) {
+//    printf("> ");
+//
+//    if (!fgets(line, sizeof(line), stdin)) {
+//      printf("\n");
+//      break;
+//    }
+//
+//    execute(line);
+//  }
+//}
+//
+//static char* readFile(const char* path);
+//void VirtualMachine::runFile(const char *path){
+//  char* source = readFile(path);
+//  ExecutionCode result = execute(source);
+//  // free(source);
+//
+//  if (result == EC_COMPILE_ERROR) exit(65);
+//  if (result == EC_RUNTIME_ERROR) exit(70);
+//  delete source;
+//}
+
+void VirtualMachine::runtimeError(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
+
+  size_t instruction = instructionPointer - scriptPointer->scriptStart();
+  int line = scriptPointer->lines[instruction];
+  fprintf(stderr, "[line %d] in script\n", line);
+
+  stack.reset();
+}
+
+inline bool VirtualMachine::isFalsey(Value value) {
+  return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+void VirtualMachine::concatenate() {
+  std::string* b = AS_STRING(stack.pop());
+  std::string* a = AS_STRING(stack.pop());
+  // TODO: intern for garbage collection
+  std::string* newString = new std::string(*a + *b);
+  stack.push(STRING_VAL(newString));
+}
+
+inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
+  if (valueA.type != valueB.type) return false;
+
+  switch (valueA.type) {
+    case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
+    case VAL_NIL:    return true;
+    case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
+    case VAL_STRING: return  *(AS_STRING(valueA)) == *(AS_STRING(valueB));
+  }
+}

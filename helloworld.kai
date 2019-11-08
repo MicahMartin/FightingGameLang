@@ -1,1 +1,4 @@
-var foo = 123; print foo;
+var foo = "trees";
+if(1+1 == 3){
+  print foo;
+}

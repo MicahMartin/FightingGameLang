@@ -19,6 +19,7 @@ uint8_t Script::writeSymbol(Value value){
 uint8_t* Script::scriptStart(){
   return &code[0];
 }
+
 /************************************** debugging *************************************/
 // TODO - template based debuggre
 int Script::jumpInstruction(const char* name, int sign, int offset) {                              

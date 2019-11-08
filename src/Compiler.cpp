@@ -4,6 +4,28 @@
 Compiler::Compiler(){}
 Compiler::~Compiler(){}
 
+bool Compiler::compile(const char *source, Script* script){
+  scanner.initScanner(source);
+  scriptPointer = script;
+
+  parser.hadError = false;
+  parser.panicMode = false;
+
+  printf("running first advance\n");
+  advance();
+  printf("first advance done\n");
+
+  while (!match(TOKEN_EOF)) {
+    printf("not EOF\n");
+    declaration();
+  }
+  emitByte(OP_RETURN);
+  if (!parser.hadError) {
+    script->disassembleScript("mainScript");
+  }
+  return !parser.hadError;
+}
+
 void Compiler::parsePrecedence(Precedence precedence){
   advance();
   printf("looking for prefix rule for token %s \n", std::string(parser.previous.start, parser.previous.length).c_str());
@@ -28,6 +50,19 @@ void Compiler::parsePrecedence(Precedence precedence){
   if (canAssign && match(TOKEN_EQUAL)) {
     error("Invalid assignment target.");
     expression();
+  }
+}
+
+void Compiler::advance() {
+  parser.previous = parser.current;
+
+  for (;;) {
+    parser.current = scanner.scan();
+    printf("done scan, parser at %s\n", std::string(parser.current.start, parser.current.length).c_str());
+
+    if (parser.current.type != TOKEN_ERROR) break;
+
+    errorAtCurrent(parser.current.start);
   }
 }
 
@@ -228,18 +263,6 @@ bool Compiler::match(TokenType expected) {
   return true;
 }
 
-void Compiler::advance() {
-  parser.previous = parser.current;
-
-  for (;;) {
-    parser.current = scanner.scan();
-    printf("done scan, parser at %s\n", std::string(parser.current.start, parser.current.length).c_str());
-
-    if (parser.current.type != TOKEN_ERROR) break;
-
-    errorAtCurrent(parser.current.start);
-  }
-}
 
 void Compiler::expression() {
   printf("in expression\n");
@@ -450,27 +473,6 @@ void Compiler::consume(TokenType type, const char* syntaxErrorMessage){
   errorAtCurrent(syntaxErrorMessage);
 }
 
-bool Compiler::compile(const char *source, Script* script){
-  scanner.initScanner(source);
-  scriptPointer = script;
-
-  parser.hadError = false;
-  parser.panicMode = false;
-
-  printf("running first advance\n");
-  advance();
-  printf("first advance done\n");
-
-  while (!match(TOKEN_EOF)) {
-    printf("not EOF\n");
-    declaration();
-  }
-  emitByte(OP_RETURN);
-  if (!parser.hadError) {
-    script->disassembleScript("mainScript");
-  }
-  return !parser.hadError;
-}
 
 
 void Compiler::error(const char* message) {
