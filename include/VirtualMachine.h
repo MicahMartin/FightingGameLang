@@ -19,12 +19,13 @@ public:
   VirtualMachine();
   ~VirtualMachine();
 
-  void repl();
-  void runFile(const char* path);
-  ExecutionCode execute(const char* source);
+  // void repl();
+  // void runFile(const char* path);
+  ExecutionCode execute(Script* script);
 
   bool debugMode;
 
+  Compiler compiler;
 private:
   ExecutionCode run();
   void runtimeError(const char* format, ...);
@@ -34,7 +35,6 @@ private:
 
   Script* scriptPointer;
   uint8_t* instructionPointer;
-  Compiler compiler;
   Stack stack;
   //TODO: Free these objects
 };

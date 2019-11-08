@@ -5,30 +5,30 @@ VirtualMachine::VirtualMachine(){}
 
 VirtualMachine::~VirtualMachine(){}
 
-void VirtualMachine::repl(){
-  char line[1024];
-  for (;;) {
-    printf("> ");
-
-    if (!fgets(line, sizeof(line), stdin)) {
-      printf("\n");
-      break;
-    }
-
-    execute(line);
-  }
-}
-
-static char* readFile(const char* path);
-void VirtualMachine::runFile(const char *path){
-  char* source = readFile(path);
-  ExecutionCode result = execute(source);
-  // free(source);
-
-  if (result == EC_COMPILE_ERROR) exit(65);
-  if (result == EC_RUNTIME_ERROR) exit(70);
-  delete source;
-}
+//void VirtualMachine::repl(){
+//  char line[1024];
+//  for (;;) {
+//    printf("> ");
+//
+//    if (!fgets(line, sizeof(line), stdin)) {
+//      printf("\n");
+//      break;
+//    }
+//
+//    execute(line);
+//  }
+//}
+//
+//static char* readFile(const char* path);
+//void VirtualMachine::runFile(const char *path){
+//  char* source = readFile(path);
+//  ExecutionCode result = execute(source);
+//  // free(source);
+//
+//  if (result == EC_COMPILE_ERROR) exit(65);
+//  if (result == EC_RUNTIME_ERROR) exit(70);
+//  delete source;
+//}
 
 void VirtualMachine::runtimeError(const char* format, ...) {
   va_list args;
@@ -222,32 +222,11 @@ inline ExecutionCode VirtualMachine::run(){
   #undef BINARY_OP
 }
 
-ExecutionCode VirtualMachine::execute(const char* source){
-  // TODO: Script array, one script for each character state, one big script for input
-  Script script;
-
-  if (!compiler.compile(source, &script)) {
-    return EC_COMPILE_ERROR;
-  }
-  scriptPointer = &script;
+ExecutionCode VirtualMachine::execute(Script* script){
+  scriptPointer = script;
   instructionPointer = scriptPointer->scriptStart();
 
   ExecutionCode result = run();
   // TODO: account for constant table / string table
   return EC_OK;
 };
-
-static char* readFile(const char* path) {
-  FILE* file = fopen(path, "rb");
-
-  fseek(file, 0L, SEEK_END);
-  size_t size = ftell(file);
-  rewind(file);
-
-  char* buffer = new char[size + 1];
-  size_t bytesRead = fread(buffer, sizeof(char), size, file);
-  buffer[bytesRead] = '\0';
-
-  fclose(file);
-  return buffer;
-}

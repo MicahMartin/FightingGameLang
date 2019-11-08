@@ -6,19 +6,19 @@ Compiler::~Compiler(){}
 
 void Compiler::parsePrecedence(Precedence precedence){
   advance();
-  printf("looking for prefix rule\n");
+  printf("looking for prefix rule for token %s \n", std::string(parser.previous.start, parser.previous.length).c_str());
   ParseFn prefixRule = getRule(parser.previous.type)->prefix;
   if (prefixRule == NULL) {
     error("Prefix rule is null");
     return;
   }
   bool canAssign = precedence <= PREC_ASSIGNMENT;
-  printf("canassign is %d\n", canAssign);
   // prefix rule should be Compiler::number
   (*this.*prefixRule)(canAssign);
   printf("called some prefixRule\n");
 
   while (precedence <= getRule(parser.current.type)->precedence) {
+    printf("we in here\n");
     advance();
     ParseFn infixRule = getRule(parser.previous.type)->infix;
     // theres gotta be a better way to write this lol
@@ -29,8 +29,6 @@ void Compiler::parsePrecedence(Precedence precedence){
     error("Invalid assignment target.");
     expression();
   }
-
-  printf("welp\n");
 }
 
 ParseRule* Compiler::getRule(TokenType type) {
@@ -235,6 +233,8 @@ void Compiler::advance() {
 
   for (;;) {
     parser.current = scanner.scan();
+    printf("done scan, parser at %s\n", std::string(parser.current.start, parser.current.length).c_str());
+
     if (parser.current.type != TOKEN_ERROR) break;
 
     errorAtCurrent(parser.current.start);
@@ -409,13 +409,14 @@ void Compiler::defineVariable(uint8_t var) {
     markInitialized();
     return;
   }
+  printf("defining global\n");
+
   emitBytes(OP_DEFINE_GLOBAL, var);
 }
 
 void Compiler::varDeclaration() {
   printf("in var decl\n");
   uint8_t global = parseVariable("Expect variable name.");
-  printf("declreddd\n");
 
   if (match(TOKEN_EQUAL)) {
     expression();
@@ -430,8 +431,10 @@ void Compiler::varDeclaration() {
 
 void Compiler::declaration() {
   if (match(TOKEN_VAR)) {
+    printf("we are declaring a var!\n");
     varDeclaration();
   } else {
+    printf("we are declaring a statement!\n");
     statement();
   }
   if (parser.panicMode) synchronize();
@@ -454,8 +457,12 @@ bool Compiler::compile(const char *source, Script* script){
   parser.hadError = false;
   parser.panicMode = false;
 
+  printf("running first advance\n");
   advance();
+  printf("first advance done\n");
+
   while (!match(TOKEN_EOF)) {
+    printf("not EOF\n");
     declaration();
   }
   emitByte(OP_RETURN);

@@ -146,6 +146,7 @@ TokenType Scanner::identifierType() {
 }
 
 Token Scanner::identifier(){
+  printf("in identifier\n");
   while (isAlpha(peek()) || isDigit(peek())) advance();
   return makeToken(identifierType());
 }
