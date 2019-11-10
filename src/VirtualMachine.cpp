@@ -1,9 +1,47 @@
-#include "VirtualMachine.h"
+#include "domain_language/VirtualMachine.h"
+#include "game_objects/Character.h"
 
 
 VirtualMachine::VirtualMachine(){}
 
 VirtualMachine::~VirtualMachine(){}
+
+void VirtualMachine::runtimeError(const char* format, ...) {
+  va_list args;
+  va_start(args, format);
+  vfprintf(stderr, format, args);
+  va_end(args);
+  fputs("\n", stderr);
+
+  size_t instruction = instructionPointer - scriptPointer->scriptStart();
+  int line = scriptPointer->lines[instruction];
+  fprintf(stderr, "[line %d] in script\n", line);
+
+  stack.reset();
+}
+
+inline bool VirtualMachine::isFalsey(Value value) {
+  return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
+}
+
+inline void VirtualMachine::concatenate() {
+  std::string* b = AS_STRING(stack.pop());
+  std::string* a = AS_STRING(stack.pop());
+  // TODO: intern for garbage collection
+  std::string* newString = new std::string(*a + *b);
+  stack.push(STRING_VAL(newString));
+}
+
+inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
+  if (valueA.type != valueB.type) return false;
+
+  switch (valueA.type) {
+    case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
+    case VAL_NIL:    return true;
+    case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
+    case VAL_STRING: return  *(AS_STRING(valueA)) == *(AS_STRING(valueB));
+  }
+}
 
 inline ExecutionCode VirtualMachine::run(){
   const char* unreachable = R""""(If you're seeing this, the code is in what I thought was an unreachable state. 
@@ -62,6 +100,7 @@ inline ExecutionCode VirtualMachine::run(){
         break;
       }
       case OP_GET_GLOBAL: {
+        // TODO: No globals
         std::string* name = READ_STRING();
 //        for (auto i : scriptPointer->globals) {
 //          printf("wtf %s\n", AS_STRING(i.second)->chars);
@@ -147,9 +186,148 @@ inline ExecutionCode VirtualMachine::run(){
         instructionPointer -= offset;
         break;
       }
+      case OP_GET_ANIM_TIME: {
+        long val = character->_getAnimTime();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_GET_HIT_STUN: {
+        long val = character->_getHitStun();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_GET_STATE_TIME: {
+        int val = character->_getStateTime();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_GET_Y_POS: {
+        long val = character->_getYPos();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_GET_INPUT: {
+        long operand = AS_NUMBER(stack.pop());
+        bool boolean = character->_getInput(operand);
+        stack.push(BOOL_VAL(boolean));
+        break;
+      }
+      case OP_GET_STATE_NUM: {
+        long val = character->_getStateNum();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_GET_CONTROL: {
+        long val = character->_getControl();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_WAS_PRESSED: {
+        long operand = AS_NUMBER(stack.pop());
+        bool boolean = character->_wasPressed(operand);
+        stack.push(BOOL_VAL(boolean));
+        break;
+      }
+      case OP_GET_COMBO: {
+        long val = character->_getCombo();
+        stack.push(NUMBER_VAL(val));
+        break;
+      }
+      case OP_HAS_AIR_ACTION: {
+        stack.push(NUMBER_VAL(character->_getAirActions()));
+        break;
+      }
+      case OP_CHANGE_STATE: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_changeState(operand);
+        // STATE IS DONE EXECUTING. WE GOT UP OUTA THERE.
+        return EC_OK;
+      }
+      case OP_CANCEL_STATE: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_cancelState(operand);
+        // STATE IS DONE EXECUTING. WE GOT UP OUTA THERE.
+        return EC_OK;
+      }
+      case OP_VELSET_X: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_velSetX(operand);
+        break;
+      }
+      // this gets called often enough to justify its own instruction rather than negating the val
+      case OP_NEG_VELSET_X: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_negVelSetX(operand);
+        break;
+      }
+      case OP_VELSET_Y: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_velSetY(operand);
+        break;
+      }
+      case OP_MOVE_F: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_moveForward(operand);
+        break;
+      }
+      case OP_MOVE_B: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_moveBack(operand);
+        break;
+      }
+      case OP_MOVE_U: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_moveUp(operand);
+        break;
+      }
+      case OP_MOVE_D: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_moveDown(operand);
+        break;
+      }
+      case OP_SET_CONTROL: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_setControl(operand);
+        break;
+      }
+      case OP_SET_COMBO: {
+        long operand = AS_NUMBER(stack.pop());
+        character->_setCombo(operand);
+        break;
+      }
+      case OP_SET_GRAVITY: {
+        bool operand = READ_BYTE();
+        character->_setGravity(operand);
+        break;
+      }
+      case OP_SET_NOGRAV_COUNT: {
+        int operand = READ_BYTE();
+        printf("setting noGravCount to %d\n", operand);
+        character->_setNoGravityCounter(operand);
+        break;
+      }
+      case OP_SET_AIR_ACTION: {
+        bool operand = READ_BYTE();
+        character->_setAirAction(operand);
+        break;
+      }
+      case OP_RESET_ANIM: {
+        character->_resetAnim();
+        break;
+      }
+      case OP_CHECK_COMMAND: {
+        long operand = AS_NUMBER(stack.pop());
+        bool commandFound = character->_checkCommand(operand);
+        stack.push(BOOL_VAL(commandFound));
+        break;
+      }
       case OP_RETURN: {
         return EC_OK;
       }
+      default: {
+       printf("invalid opcode\n");
+       break;
+     }
     }
   }
 
@@ -161,7 +339,7 @@ inline ExecutionCode VirtualMachine::run(){
 }
 
 ExecutionCode VirtualMachine::execute(Script* script){
-  // give me pointer to a compiled script and ima run that
+  stack.reset();
   scriptPointer = script;
   instructionPointer = scriptPointer->scriptStart();
 
@@ -169,65 +347,3 @@ ExecutionCode VirtualMachine::execute(Script* script){
   // TODO: account for constant table / string table
   return EC_OK;
 };
-
-//void VirtualMachine::repl(){
-//  char line[1024];
-//  for (;;) {
-//    printf("> ");
-//
-//    if (!fgets(line, sizeof(line), stdin)) {
-//      printf("\n");
-//      break;
-//    }
-//
-//    execute(line);
-//  }
-//}
-//
-//static char* readFile(const char* path);
-//void VirtualMachine::runFile(const char *path){
-//  char* source = readFile(path);
-//  ExecutionCode result = execute(source);
-//  // free(source);
-//
-//  if (result == EC_COMPILE_ERROR) exit(65);
-//  if (result == EC_RUNTIME_ERROR) exit(70);
-//  delete source;
-//}
-
-void VirtualMachine::runtimeError(const char* format, ...) {
-  va_list args;
-  va_start(args, format);
-  vfprintf(stderr, format, args);
-  va_end(args);
-  fputs("\n", stderr);
-
-  size_t instruction = instructionPointer - scriptPointer->scriptStart();
-  int line = scriptPointer->lines[instruction];
-  fprintf(stderr, "[line %d] in script\n", line);
-
-  stack.reset();
-}
-
-inline bool VirtualMachine::isFalsey(Value value) {
-  return IS_NIL(value) || (IS_BOOL(value) && !AS_BOOL(value));
-}
-
-void VirtualMachine::concatenate() {
-  std::string* b = AS_STRING(stack.pop());
-  std::string* a = AS_STRING(stack.pop());
-  // TODO: intern for garbage collection
-  std::string* newString = new std::string(*a + *b);
-  stack.push(STRING_VAL(newString));
-}
-
-inline bool VirtualMachine::valuesEqual(Value valueA, Value valueB) {
-  if (valueA.type != valueB.type) return false;
-
-  switch (valueA.type) {
-    case VAL_BOOL:   return AS_BOOL(valueA) == AS_BOOL(valueB);
-    case VAL_NIL:    return true;
-    case VAL_NUMBER: return AS_NUMBER(valueA) == AS_NUMBER(valueB);
-    case VAL_STRING: return  *(AS_STRING(valueA)) == *(AS_STRING(valueB));
-  }
-}

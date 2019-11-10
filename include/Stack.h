@@ -1,7 +1,8 @@
 #ifndef _Stack_h
 #define _Stack_h
-#include "Common.h"
-#include "Value.h"
+
+#include "domain_language/Common.h"
+#include "domain_language/Value.h"
 
 class Stack {
 public:

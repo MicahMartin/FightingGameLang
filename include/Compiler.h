@@ -1,9 +1,9 @@
 #ifndef _Compiler_h
 #define _Compiler_h
 
-#include "Common.h"
-#include "Scanner.h"
-#include "Script.h"
+#include "domain_language/Common.h"
+#include "domain_language/Scanner.h"
+#include "domain_language/Script.h"
 
 typedef struct {
   Token current;
@@ -40,7 +40,7 @@ public:
   Compiler();
   ~Compiler();
 
-  bool compile(const char* source, Script* script);
+  bool compile(const char* source, Script* script, const char* scriptTag);
   void emitByte(uint8_t byte);
   void emitBytes(uint8_t firstByte, uint8_t secondByte);
   Script* currentScript();
@@ -51,6 +51,8 @@ private:
   Script* scriptPointer;
 
   void printStatement();
+  void engineCallExpressionStatement(OpCode call);
+  void engineCallStatement(OpCode call);
   void parsePrecedence(Precedence precedence);
   ParseRule* getRule(TokenType type);
 
@@ -70,6 +72,8 @@ private:
   void unary(bool canAssign);
   void binary(bool canAssign);
   void literal(bool canAssign);
+  void engineCall(bool canAssign);
+  void engineCallArg(bool canAssign);
   void grouping(bool canAssign);
   void logicalOr(bool canAssign);
   void logicalAnd(bool canAssign);
@@ -102,7 +106,7 @@ private:
   void synchronize();
   void markInitialized();
 
-  ParseRule rules[36] = {
+  ParseRule rules[63] = {
     { &Compiler::grouping, NULL,    PREC_NONE },                  // TOKEN_LEFT_PAREN
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_RIGHT_PAREN
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_LEFT_BRACE
@@ -139,6 +143,35 @@ private:
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_WHILE
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_ERROR
     { NULL,     NULL,    PREC_NONE },                             // TOKEN_EOF
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_ANIM_TIME, 
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_HIT_STUN, 
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_STATE_TIME,
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_Y_POS, 
+    { &Compiler::engineCallArg, &Compiler::engineCallArg, PREC_NONE },  // TOKEN_GET_INPUT, 
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_STATE_NUM,
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_COMBO, 
+    { &Compiler::engineCall, &Compiler::engineCall, PREC_NONE },  // TOKEN_GET_CONTROL,
+
+    { &Compiler::engineCallArg, &Compiler::engineCallArg, PREC_NONE },  // TOKEN_CHECK_COMMAND, 
+    { &Compiler::engineCallArg, &Compiler::engineCallArg, PREC_NONE },  // TOKEN_WAS_PRESSED, 
+    { &Compiler::engineCallArg, &Compiler::engineCallArg, PREC_NONE },  // TOKEN_HAS_AIR_ACTION,
+
+    { NULL, NULL, PREC_NONE },  // TOKEN_CHANGE_STATE, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_CANCEL_STATE,
+
+    { NULL, NULL, PREC_NONE },  // TOKEN_VELSET_X, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_NEG_VELSET_X, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_VELSET_Y,
+    { NULL, NULL, PREC_NONE },  // TOKEN_MOVE_F, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_MOVE_B, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_MOVE_U, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_MOVE_D,
+    { NULL, NULL, PREC_NONE },  // TOKEN_SET_CONTROL, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_SET_COMBO, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_SET_GRAVITY,
+    { NULL, NULL, PREC_NONE },  // TOKEN_SET_NOGRAV_COUNT, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_SET_AIR_ACTION, 
+    { NULL, NULL, PREC_NONE },  // TOKEN_RESET_ANIM,
   };
 };
 

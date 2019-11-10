@@ -1,5 +1,5 @@
-#include "Common.h"
-#include "Scanner.h"
+#include "domain_language/Common.h"
+#include "domain_language/Scanner.h"
 #include "string.h"
 
 
@@ -12,49 +12,12 @@ void Scanner::initScanner(const char* source){
   line = 1;
 }
 
-Token Scanner::scan(){
-  skipWhitespace();
-  start = current;
-
-  if (isAtEnd()) return makeToken(TOKEN_EOF);
-
-  char c = advance();
-
-  if (isAlpha(c)) return identifier();
-  if (isDigit(c)) return number();
-  
-
-  switch (c) {
-    case '(': return makeToken(TOKEN_LEFT_PAREN);
-    case ')': return makeToken(TOKEN_RIGHT_PAREN);
-    case '{': return makeToken(TOKEN_LEFT_BRACE);
-    case '}': return makeToken(TOKEN_RIGHT_BRACE);
-    case ';': return makeToken(TOKEN_SEMICOLON);
-    case ',': return makeToken(TOKEN_COMMA);
-    case '-': return makeToken(TOKEN_MINUS);
-    case '+': return makeToken(TOKEN_PLUS); 
-    case '/': return makeToken(TOKEN_SLASH);
-    case '*': return makeToken(TOKEN_STAR);
-    case '!':
-      return makeToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
-    case '=':
-      return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
-    case '<':
-      return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
-    case '>':
-      return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
-    case '"': return string();
-  }
-
-  return errorToken("Unexpected character.");
-}
-
 bool Scanner::isAtEnd() {
   return *current == '\0';
 }
 
 bool Scanner::isAlpha(char c) {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_';
+  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '_' || c == '$';
 }
 
 bool Scanner::isDigit(char c) {
@@ -68,6 +31,7 @@ Token Scanner::makeToken(TokenType tokenType) {
   token.length = (int)(current - start);
   token.line = line;
 
+  // printf("made token %s\n", std::string(start, current-start).c_str());
   return token;
 }
 
@@ -178,12 +142,68 @@ TokenType Scanner::identifierType() {
         }
       }
       break;
+    case '$':
+      std::string theStr(start, current - start);
+      // printf("the str in question %s\n", theStr.c_str());
+      auto type = keywordTypes.find(theStr);
+      if (type == keywordTypes.end()) {
+        // printf("couldnt find %s\n", theStr.c_str());
+        return TOKEN_IDENTIFIER;
+      } else {
+        // printf("found the %s\n", theStr.c_str());
+        return type->second;
+      }
+      // return (type == keywordTypes.end() ? TOKEN_IDENTIFIER : type->second);
+      break;
   }
   return TOKEN_IDENTIFIER;
 }
 
 Token Scanner::identifier(){
-  printf("in identifier\n");
+  // printf("in identifier\n");
+  // consume all alphaNumeric chars for this identifier
   while (isAlpha(peek()) || isDigit(peek())) advance();
   return makeToken(identifierType());
+}
+
+Token Scanner::scan(){
+  // printf("in scan\n");
+  skipWhitespace();
+  start = current;
+
+  if (isAtEnd()) {
+    // printf("scan reached end of file\n");
+    return makeToken(TOKEN_EOF);
+  }
+
+  char c = advance();
+  // printf("char from advance is %c\n", c);
+
+  if (isAlpha(c)) return identifier();
+  if (isDigit(c)) return number();
+  
+
+  switch (c) {
+    case '(': return makeToken(TOKEN_LEFT_PAREN);
+    case ')': return makeToken(TOKEN_RIGHT_PAREN);
+    case '{': return makeToken(TOKEN_LEFT_BRACE);
+    case '}': return makeToken(TOKEN_RIGHT_BRACE);
+    case ';': return makeToken(TOKEN_SEMICOLON);
+    case ',': return makeToken(TOKEN_COMMA);
+    case '-': return makeToken(TOKEN_MINUS);
+    case '+': return makeToken(TOKEN_PLUS); 
+    case '/': return makeToken(TOKEN_SLASH);
+    case '*': return makeToken(TOKEN_STAR);
+    case '!':
+      return makeToken(match('=') ? TOKEN_BANG_EQUAL : TOKEN_BANG);
+    case '=':
+      return makeToken(match('=') ? TOKEN_EQUAL_EQUAL : TOKEN_EQUAL);
+    case '<':
+      return makeToken(match('=') ? TOKEN_LESS_EQUAL : TOKEN_LESS);
+    case '>':
+      return makeToken(match('=') ? TOKEN_GREATER_EQUAL : TOKEN_GREATER);
+    case '"': return string();
+  }
+
+  return errorToken("Unexpected character.");
 }

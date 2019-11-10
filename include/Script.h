@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <unordered_map>
-#include "Common.h"
-#include "Value.h"
-#include "Scanner.h"
+#include "domain_language/Common.h"
+#include "domain_language/Value.h"
+#include "domain_language/Scanner.h"
 
 typedef enum {
   OP_CONSTANT,
@@ -31,8 +31,65 @@ typedef enum {
   OP_JUMP_IF_FALSE,
   OP_JUMP,
   OP_LOOP,
+  OP_GET_ANIM_TIME,
+  OP_GET_HIT_STUN,
+  OP_GET_STATE_TIME,
+  OP_GET_Y_POS,
+  OP_GET_INPUT,
+  OP_GET_STATE_NUM,
+  OP_GET_CONTROL,
+  OP_WAS_PRESSED,
+  OP_GET_COMBO,
+  OP_HAS_AIR_ACTION,
+  OP_CHANGE_STATE,
+  OP_CANCEL_STATE,
+  OP_VELSET_X,
+  OP_NEG_VELSET_X,
+  OP_VELSET_Y,
+  OP_MOVE_F,
+  OP_MOVE_B,
+  OP_MOVE_U,
+  OP_MOVE_D,
+  OP_SET_CONTROL,
+  OP_SET_COMBO,
+  OP_SET_GRAVITY,
+  OP_SET_NOGRAV_COUNT,
+  OP_SET_AIR_ACTION,
+  OP_RESET_ANIM,
+  OP_CHECK_COMMAND,
   OP_RETURN
 } OpCode;
+
+static const std::unordered_map<std::string, OpCode> engineCallMap {
+  // modify stack
+  {"$get_anim_time", OP_GET_ANIM_TIME},
+  {"$get_hit_stun", OP_GET_HIT_STUN},
+  {"$get_state_time", OP_GET_STATE_TIME},
+  {"$get_y_pos", OP_GET_Y_POS},
+  {"$get_input", OP_GET_INPUT},
+  {"$get_state_num", OP_GET_STATE_NUM},
+  {"$get_control", OP_GET_CONTROL},
+  {"$was_pressed", OP_WAS_PRESSED},
+  {"$get_combo", OP_GET_COMBO},
+  {"$has_air_action", OP_HAS_AIR_ACTION},
+  // modify game state
+  {"$change_state", OP_CHANGE_STATE},
+  {"$cancel_state", OP_CANCEL_STATE},
+  {"$velset_x", OP_VELSET_X},
+  {"$neg_velset_x", OP_NEG_VELSET_X},
+  {"$velset_y", OP_VELSET_Y},
+  {"$move_f", OP_MOVE_F},
+  {"$move_b", OP_MOVE_B},
+  {"$move_u", OP_MOVE_U},
+  {"$move_d", OP_MOVE_D},
+  {"$set_control", OP_SET_CONTROL},
+  {"$set_combo", OP_SET_COMBO},
+  {"$set_gravity", OP_SET_GRAVITY},
+  {"$set_nograv_count", OP_SET_NOGRAV_COUNT},
+  {"$set_air_action", OP_SET_AIR_ACTION},
+  {"$reset_anim", OP_RESET_ANIM},
+  {"$checkCommand", OP_CHECK_COMMAND}
+};
 
 typedef struct {
   Token name;

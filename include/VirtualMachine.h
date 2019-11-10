@@ -1,10 +1,10 @@
 #ifndef _VirtualMachine_h
 #define _VirtualMachine_h
 
-#include "Common.h"
-#include "Script.h"
-#include "Stack.h"
-#include "Compiler.h"
+#include "domain_language/Common.h"
+#include "domain_language/Script.h"
+#include "domain_language/Stack.h"
+#include "domain_language/Compiler.h"
 #include <unordered_map>
 
 typedef enum {
@@ -14,18 +14,17 @@ typedef enum {
 } ExecutionCode;
 
 
+class Character;
 class VirtualMachine {
 public:
   VirtualMachine();
   ~VirtualMachine();
 
-  // void repl();
-  // void runFile(const char* path);
   ExecutionCode execute(Script* script);
-
   bool debugMode;
 
   Compiler compiler;
+  Character* character;
 private:
   ExecutionCode run();
   void runtimeError(const char* format, ...);
